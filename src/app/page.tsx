@@ -20,7 +20,13 @@ export default function LandingPage() {
 
       <div className="flex flex-1 items-center justify-center px-6 py-20">
         <div className="grid w-full max-w-5xl items-center gap-16 md:grid-cols-2">
-          <div>
+          {/* Sign-in form first on mobile (order-2 on desktop puts it right) */}
+          <div className="flex justify-center md:order-2">
+            <Suspense fallback={<div className="h-80 w-full max-w-sm" />}>
+              <SignInForm />
+            </Suspense>
+          </div>
+          <div className="md:order-1">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber/10 px-3 py-1 text-xs font-medium text-amber-dark">
               <span className="h-1.5 w-1.5 rounded-full bg-amber" />
               Your vault, on the web
@@ -58,11 +64,6 @@ export default function LandingPage() {
                 </span>
               </li>
             </ul>
-          </div>
-          <div className="flex justify-center">
-            <Suspense fallback={<div className="h-80 w-full max-w-sm" />}>
-              <SignInForm />
-            </Suspense>
           </div>
         </div>
       </div>

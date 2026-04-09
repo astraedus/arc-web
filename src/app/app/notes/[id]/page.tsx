@@ -77,7 +77,9 @@ export default async function NoteDetailPage({ params }: PageProps) {
 
       <div className="rounded-2xl border border-card-border bg-card p-8">
         <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
-          {note.content}
+          {note.content.includes("\n")
+            ? note.content.slice(note.content.indexOf("\n") + 1)
+            : note.content}
         </p>
       </div>
 

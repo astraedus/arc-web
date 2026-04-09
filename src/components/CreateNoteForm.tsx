@@ -40,13 +40,14 @@ export default function CreateNoteForm() {
       .select("id")
       .single();
 
-    setSaving(false);
-
     if (insertError || !data) {
+      setSaving(false);
       setError(insertError?.message ?? "Failed to save note.");
       return;
     }
 
+    // Don't reset saving — the redirect will unmount this component.
+    // Keeping the button disabled prevents double-submit.
     startTransition(() => {
       router.replace(`/app/notes/${data.id}`);
       router.refresh();
