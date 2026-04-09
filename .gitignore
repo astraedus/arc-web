@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Internal agent files
+CLAUDE.md
+AGENTS.md
+tasks/
+docs/exec-plans/
