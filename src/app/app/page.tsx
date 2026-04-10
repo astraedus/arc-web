@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import NoteCard from "@/components/NoteCard";
+import SearchableStream from "@/components/SearchBar";
 import type { JournalEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -52,11 +52,7 @@ export default async function StreamPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
-          {list.map((note) => (
-            <NoteCard key={note.id} note={note} />
-          ))}
-        </div>
+        <SearchableStream initialNotes={list} />
       )}
     </div>
   );

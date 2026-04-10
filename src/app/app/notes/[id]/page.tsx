@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import EditableNoteBody from "@/components/EditableNoteBody";
+import DeleteNoteButton from "@/components/DeleteNoteButton";
 import type { EntryTheme, Insight, JournalEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -75,13 +77,7 @@ export default async function NoteDetailPage({ params }: PageProps) {
         </h1>
       </header>
 
-      <div className="rounded-2xl border border-card-border bg-card p-8">
-        <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
-          {note.content.includes("\n")
-            ? note.content.slice(note.content.indexOf("\n") + 1)
-            : note.content}
-        </p>
-      </div>
+      <EditableNoteBody id={note.id} content={note.content} />
 
       {(note.mood_tag || (note.theme_tags && note.theme_tags.length > 0)) ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -170,6 +166,10 @@ export default async function NoteDetailPage({ params }: PageProps) {
           </div>
         </section>
       ) : null}
+
+      <div className="border-t border-card-border pt-6">
+        <DeleteNoteButton id={note.id} />
+      </div>
     </article>
   );
 }

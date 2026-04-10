@@ -22,6 +22,12 @@ function preview(text: string, max = 240) {
 }
 
 export default function NoteCard({ note }: NoteCardProps) {
+  const showBadgeRow =
+    note.mood_tag ||
+    note.note_type !== "text" ||
+    note.location ||
+    (note.theme_tags && note.theme_tags.length > 0);
+
   return (
     <Link
       href={`/app/notes/${note.id}`}
@@ -29,28 +35,40 @@ export default function NoteCard({ note }: NoteCardProps) {
     >
       <div className="flex items-center justify-between text-xs text-warm-gray-light">
         <span className="uppercase tracking-wide">{note.note_type}</span>
-        <span>{formatDate(note.created_at)}</span>
+        <div className="flex items-center gap-2">
+          {note.location ? (
+            <span>{note.location}</span>
+          ) : null}
+          <span>{formatDate(note.created_at)}</span>
+        </div>
       </div>
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-        {preview(note.content || "(empty note)")}
-      </p>
-      {(note.theme_tags && note.theme_tags.length > 0) || note.mood_tag ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2">
+
+      {showBadgeRow ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {note.mood_tag ? (
-            <span className="rounded-full bg-amber/10 px-2.5 py-0.5 text-xs font-medium text-amber-dark">
+            <span className="rounded-full bg-amber/10 px-2 py-0.5 text-xs text-amber-dark">
               {note.mood_tag}
+            </span>
+          ) : null}
+          {note.note_type !== "text" ? (
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-warm-gray">
+              {note.note_type}
             </span>
           ) : null}
           {note.theme_tags?.map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-warm-gray"
+              className="rounded-full bg-muted px-2 py-0.5 text-xs text-warm-gray"
             >
               {tag}
             </span>
           ))}
         </div>
       ) : null}
+
+      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+        {preview(note.content || "(empty note)")}
+      </p>
     </Link>
   );
 }
