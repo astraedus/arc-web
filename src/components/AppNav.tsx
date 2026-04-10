@@ -8,8 +8,8 @@ export default function AppNav({ email }: AppNavProps) {
   return (
     <header className="sticky top-0 z-10 border-b border-card-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-        <Link href="/app" className="text-xl font-semibold tracking-tight">
-          Arc<span className="text-amber">.</span>
+        <Link href="/app" className="flex items-center">
+          <img src="/arc-logo-nav.svg" alt="Arc" width={90} height={26} />
         </Link>
         <nav className="flex items-center gap-6 text-sm">
           <Link
