@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import NoteCard from "@/components/NoteCard";
-import type { JournalEntry } from "@/lib/types";
+import type { JournalEntry, EchoConnection } from "@/lib/types";
 
 interface SearchableStreamProps {
   initialNotes: JournalEntry[];
+  echoMap?: Record<string, EchoConnection[]>;
 }
 
-export default function SearchableStream({ initialNotes }: SearchableStreamProps) {
+export default function SearchableStream({ initialNotes, echoMap }: SearchableStreamProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<JournalEntry[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -79,7 +80,11 @@ export default function SearchableStream({ initialNotes }: SearchableStreamProps
       ) : (
         <div className="space-y-4">
           {notes.map((note) => (
-            <NoteCard key={note.id} note={note} />
+            <NoteCard
+              key={note.id}
+              note={note}
+              echoes={echoMap?.[note.id]}
+            />
           ))}
         </div>
       )}

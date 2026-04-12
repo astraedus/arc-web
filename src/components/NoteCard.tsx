@@ -1,8 +1,9 @@
 import Link from "next/link";
-import type { JournalEntry } from "@/lib/types";
+import type { JournalEntry, EchoConnection } from "@/lib/types";
 
 interface NoteCardProps {
   note: JournalEntry;
+  echoes?: EchoConnection[];
 }
 
 function formatDate(iso: string) {
@@ -21,7 +22,14 @@ function preview(text: string, max = 240) {
   return flat.length > max ? `${flat.slice(0, max)}...` : flat;
 }
 
-export default function NoteCard({ note }: NoteCardProps) {
+function formatEchoDate(iso: string) {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export default function NoteCard({ note, echoes }: NoteCardProps) {
   const showBadgeRow =
     note.mood_tag ||
     note.note_type !== "text" ||
@@ -69,6 +77,29 @@ export default function NoteCard({ note }: NoteCardProps) {
       <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
         {preview(note.content || "(empty note)")}
       </p>
+
+      {echoes && echoes.length > 0 && (
+        <div className="mt-3 flex items-center gap-1.5 text-xs text-amber-dark">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0"
+          >
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          <span>
+            Echoes a note from{" "}
+            {formatEchoDate(echoes[0].created_at)}
+          </span>
+        </div>
+      )}
     </Link>
   );
 }

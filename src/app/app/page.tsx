@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SearchableStream from "@/components/SearchBar";
-import type { JournalEntry } from "@/lib/types";
+import type { JournalEntry, EchoConnection } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +16,31 @@ export default async function StreamPage() {
     .limit(100);
 
   const list = (notes ?? []) as JournalEntry[];
+
+  // Fetch echo connections for all displayed notes.
+  const noteIds = list.map((n) => n.id);
+  let echoMap: Record<string, EchoConnection[]> = {};
+  if (noteIds.length > 0) {
+    const { data: echoes } = await supabase
+      .from("echo_connections")
+      .select("*")
+      .or(
+        `source_entry_id.in.(${noteIds.join(",")}),echo_entry_id.in.(${noteIds.join(",")})`
+      );
+    if (echoes) {
+      for (const echo of echoes as EchoConnection[]) {
+        // Map echoes to both source and echo entry
+        if (noteIds.includes(echo.source_entry_id)) {
+          if (!echoMap[echo.source_entry_id]) echoMap[echo.source_entry_id] = [];
+          echoMap[echo.source_entry_id].push(echo);
+        }
+        if (noteIds.includes(echo.echo_entry_id)) {
+          if (!echoMap[echo.echo_entry_id]) echoMap[echo.echo_entry_id] = [];
+          echoMap[echo.echo_entry_id].push(echo);
+        }
+      }
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -52,7 +77,7 @@ export default async function StreamPage() {
           </Link>
         </div>
       ) : (
-        <SearchableStream initialNotes={list} />
+        <SearchableStream initialNotes={list} echoMap={echoMap} />
       )}
     </div>
   );

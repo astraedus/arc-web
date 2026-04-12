@@ -19,6 +19,12 @@ export default function AppNav({ email }: AppNavProps) {
             Stream
           </Link>
           <Link
+            href="/app/mirror"
+            className="text-warm-gray hover:text-foreground transition-colors"
+          >
+            Mirror
+          </Link>
+          <Link
             href="/app/new"
             className="text-warm-gray hover:text-foreground transition-colors"
           >

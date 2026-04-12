@@ -45,3 +45,25 @@ export interface Profile {
   created_at: string;
   updated_at: string;
 }
+
+export interface Reflection {
+  id: string;
+  user_id: string;
+  reflection_type: string;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown> | null;
+  entry_count_at_generation: number | null;
+  period_start: string | null;
+  period_end: string | null;
+  created_at: string;
+}
+
+export interface EchoConnection {
+  id: string;
+  user_id: string;
+  source_entry_id: string;
+  echo_entry_id: string;
+  description: string | null;
+  created_at: string;
+}
