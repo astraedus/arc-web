@@ -1,7 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import ExportButton from "@/components/ExportButton";
+import UserIdToggle from "@/components/UserIdToggle";
 
 export const dynamic = "force-dynamic";
+
+async function signOutAction() {
+  "use server";
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/");
+}
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -38,8 +47,8 @@ export default async function ProfilePage() {
           </div>
           <div className="flex items-center justify-between">
             <dt className="text-warm-gray">User ID</dt>
-            <dd className="font-mono text-xs text-warm-gray-light">
-              {user?.id ?? "—"}
+            <dd>
+              <UserIdToggle userId={user?.id ?? null} />
             </dd>
           </div>
         </dl>
@@ -65,7 +74,7 @@ export default async function ProfilePage() {
         <p className="mt-2 text-sm text-warm-gray">
           Sign out of this browser. Your phone session will stay signed in.
         </p>
-        <form action="/signout" method="post" className="mt-5">
+        <form action={signOutAction} className="mt-5">
           <button
             type="submit"
             className="rounded-lg border border-card-border px-4 py-2 text-sm text-warm-gray transition-colors hover:border-amber/40 hover:text-foreground"

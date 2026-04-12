@@ -65,15 +65,16 @@ export default async function StreamPage() {
         </div>
       ) : list.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-card-border bg-card p-12 text-center">
-          <h2 className="text-lg font-semibold">No notes yet</h2>
+          <h2 className="text-lg font-semibold">Start your arc.</h2>
           <p className="mt-2 text-sm text-warm-gray">
-            Write your first note from the web, or pull it up on the phone.
+            Write your first entry. Your journal grows from here -- the Mirror,
+            the mind map, and your insights all begin with a single note.
           </p>
           <Link
             href="/app/new"
-            className="mt-6 inline-block rounded-lg bg-amber px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-dark"
+            className="mt-6 inline-block rounded-lg bg-amber px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-dark"
           >
-            Write a note
+            Write your first entry
           </Link>
         </div>
       ) : (

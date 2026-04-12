@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ClientDate from "@/components/ClientDate";
 import type { JournalEntry, EchoConnection } from "@/lib/types";
 
 interface NoteCardProps {
@@ -6,27 +7,9 @@ interface NoteCardProps {
   echoes?: EchoConnection[];
 }
 
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 function preview(text: string, max = 240) {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max)}...` : flat;
-}
-
-function formatEchoDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export default function NoteCard({ note, echoes }: NoteCardProps) {
@@ -39,7 +22,7 @@ export default function NoteCard({ note, echoes }: NoteCardProps) {
   return (
     <Link
       href={`/app/notes/${note.id}`}
-      className="block rounded-2xl border border-card-border bg-card p-6 transition-all hover:border-amber/30 hover:shadow-sm"
+      className="block rounded-2xl border border-card-border bg-card p-6 transition-all hover:border-amber/30 hover:shadow-sm hover:bg-amber/[0.02] cursor-pointer"
     >
       <div className="flex items-center justify-between text-xs text-warm-gray-light">
         <span className="uppercase tracking-wide">{note.note_type}</span>
@@ -47,7 +30,7 @@ export default function NoteCard({ note, echoes }: NoteCardProps) {
           {note.location ? (
             <span>{note.location}</span>
           ) : null}
-          <span>{formatDate(note.created_at)}</span>
+          <ClientDate iso={note.created_at} format="date" />
         </div>
       </div>
 
@@ -96,7 +79,7 @@ export default function NoteCard({ note, echoes }: NoteCardProps) {
           </svg>
           <span>
             Echoes a note from{" "}
-            {formatEchoDate(echoes[0].created_at)}
+            <ClientDate iso={echoes[0].created_at} format="short" />
           </span>
         </div>
       )}

@@ -2,17 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ReflectionBody from "@/components/ReflectionBody";
+import ClientDate from "@/components/ClientDate";
 import type { Reflection } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -48,7 +41,7 @@ export default async function ReflectionDetailPage({ params }: PageProps) {
           <span className="uppercase tracking-wide">
             {reflection.reflection_type}
           </span>
-          <span>{formatDate(reflection.created_at)}</span>
+          <ClientDate iso={reflection.created_at} format="datetime" />
           {reflection.entry_count_at_generation != null && (
             <span>
               Based on {reflection.entry_count_at_generation} entries
@@ -66,8 +59,8 @@ export default async function ReflectionDetailPage({ params }: PageProps) {
 
       {reflection.period_start && reflection.period_end && (
         <div className="text-xs text-warm-gray-light">
-          Period: {formatDate(reflection.period_start)} &ndash;{" "}
-          {formatDate(reflection.period_end)}
+          Period: <ClientDate iso={reflection.period_start} format="datetime" /> &ndash;{" "}
+          <ClientDate iso={reflection.period_end} format="datetime" />
         </div>
       )}
     </article>

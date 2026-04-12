@@ -61,7 +61,7 @@ export default function ExportButton() {
       setStatus("done");
       setMessage(
         data.stats
-          ? `Exported ${data.stats.notes ?? 0} notes, ${data.stats.nodes ?? 0} map nodes.`
+          ? `Exported ${data.stats.noteCount ?? data.stats.notes ?? 0} notes, ${data.stats.fileCount ?? data.stats.nodes ?? 0} files.`
           : "Export complete."
       );
     } catch (err) {

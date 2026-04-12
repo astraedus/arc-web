@@ -16,25 +16,37 @@ export default function DeleteNoteButton({ id }: DeleteNoteButtonProps) {
   const [isPending, startTransition] = useTransition();
 
   async function handleDelete() {
-    setError(null);
-    setDeleting(true);
-
-    const supabase = createClient();
-    const { error: deleteError } = await supabase
-      .from("journal_entries")
-      .delete()
-      .eq("id", id);
-
-    if (deleteError) {
-      setDeleting(false);
-      setError(deleteError.message);
+    // Extra safety net: browser-level confirmation
+    if (!window.confirm("Delete this note? This can't be undone.")) {
       return;
     }
 
-    startTransition(() => {
-      router.replace("/app");
-      router.refresh();
-    });
+    setError(null);
+    setDeleting(true);
+
+    try {
+      const supabase = createClient();
+      const { error: deleteError } = await supabase
+        .from("journal_entries")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) {
+        setDeleting(false);
+        setError(deleteError.message);
+        return;
+      }
+
+      startTransition(() => {
+        router.replace("/app");
+        router.refresh();
+      });
+    } catch (err) {
+      setDeleting(false);
+      setError(
+        err instanceof Error ? err.message : "Failed to delete note. Please try again."
+      );
+    }
   }
 
   if (confirming) {

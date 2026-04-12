@@ -3,19 +3,10 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import EditableNoteBody from "@/components/EditableNoteBody";
 import DeleteNoteButton from "@/components/DeleteNoteButton";
+import ClientDate from "@/components/ClientDate";
 import type { EntryTheme, Insight, JournalEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString(undefined, {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -67,13 +58,18 @@ export default async function NoteDetailPage({ params }: PageProps) {
       <header className="space-y-3">
         <div className="flex flex-wrap items-center gap-3 text-xs text-warm-gray-light">
           <span className="uppercase tracking-wide">{note.note_type}</span>
-          <span>{formatDateTime(note.created_at)}</span>
+          <ClientDate iso={note.created_at} format="datetime" />
           {note.updated_at && note.updated_at !== note.created_at ? (
-            <span>edited {formatDateTime(note.updated_at)}</span>
+            <span>edited <ClientDate iso={note.updated_at} format="datetime" /></span>
           ) : null}
         </div>
         <h1 className="text-3xl font-bold tracking-tight leading-tight">
-          {note.content.split("\n")[0].slice(0, 120) || "Untitled note"}
+          {(() => {
+            const firstLine = note.content.split("\n")[0] || "";
+            if (firstLine.length <= 130) return firstLine || "Untitled note";
+            const truncated = firstLine.substring(0, 130).replace(/\s+\S*$/, "");
+            return (truncated || firstLine.substring(0, 130)) + "...";
+          })()}
         </h1>
       </header>
 
@@ -151,9 +147,7 @@ export default async function NoteDetailPage({ params }: PageProps) {
                   <span className="text-xs uppercase tracking-wide text-amber-dark">
                     {i.insight_type}
                   </span>
-                  <span className="text-xs text-warm-gray-light">
-                    {formatDateTime(i.created_at)}
-                  </span>
+                  <ClientDate iso={i.created_at} format="datetime" className="text-xs text-warm-gray-light" />
                 </div>
                 <h3 className="mt-1 text-sm font-semibold text-foreground">
                   {i.title}

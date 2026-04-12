@@ -3,24 +3,38 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import ClientDate from "@/components/ClientDate";
 import type { Reflection } from "@/lib/types";
 
 interface MirrorClientProps {
   initialReflections: Reflection[];
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function previewBody(text: string, lines = 3) {
   const split = text.split("\n").filter((l) => l.trim());
   const slice = split.slice(0, lines).join("\n");
   return slice.length < text.length ? `${slice}...` : slice;
+}
+
+function friendlyMirrorError(raw: string): string {
+  if (
+    raw.includes("non-2xx") ||
+    raw.includes("Edge Function") ||
+    raw.includes("FunctionsHttpError") ||
+    raw.includes("FunctionsRelayError") ||
+    raw.includes("FunctionsFetchError") ||
+    raw.includes("ECONNREFUSED") ||
+    raw.includes("500")
+  ) {
+    return "The Mirror is currently unavailable. Please try again in a moment.";
+  }
+  if (raw.includes("401") || raw.includes("Unauthorized") || raw.includes("JWT")) {
+    return "Your session has expired. Please sign out and sign back in.";
+  }
+  if (raw.includes("timeout") || raw.includes("AbortError")) {
+    return "The request took too long. Please try again.";
+  }
+  return "Something went wrong. Please try again in a moment.";
 }
 
 export default function MirrorClient({
@@ -53,19 +67,22 @@ export default function MirrorClient({
       );
 
       if (error) {
-        setAskError(error.message);
+        setAskError(friendlyMirrorError(error.message));
         setAsking(false);
         return;
       }
 
-      setAnswer(
-        typeof data === "string"
-          ? data
-          : data?.body ?? data?.reflection ?? JSON.stringify(data)
-      );
+      const reflection = data?.reflection;
+      if (reflection?.body) {
+        setAnswer(reflection.body);
+        // Add to reflections list
+        setReflections((prev) => [reflection as Reflection, ...prev]);
+      } else {
+        setAnswer(typeof data === "string" ? data : JSON.stringify(data));
+      }
     } catch (err) {
       setAskError(
-        err instanceof Error ? err.message : "Something went wrong."
+        friendlyMirrorError(err instanceof Error ? err.message : "")
       );
     } finally {
       setAsking(false);
@@ -79,18 +96,24 @@ export default function MirrorClient({
 
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.functions.invoke(
+      const { data: weeklyData, error } = await supabase.functions.invoke(
         "mirror-reflect",
         { body: { type: "weekly" } }
       );
 
       if (error) {
-        setGenMessage(`Failed: ${error.message}`);
+        setGenMessage(friendlyMirrorError(error.message));
         setGenerating(false);
         return;
       }
 
       setGenMessage("Weekly reflection generated.");
+
+      // Add the new reflection to the list immediately if available
+      if (weeklyData?.reflection) {
+        setReflections((prev) => [weeklyData.reflection as Reflection, ...prev]);
+        return; // Skip the re-fetch since we already have it
+      }
 
       // Refresh the reflections list
       const { data: fresh } = await supabase
@@ -102,7 +125,7 @@ export default function MirrorClient({
       if (fresh) setReflections(fresh as Reflection[]);
     } catch (err) {
       setGenMessage(
-        err instanceof Error ? err.message : "Something went wrong."
+        friendlyMirrorError(err instanceof Error ? err.message : "")
       );
     } finally {
       setGenerating(false);
@@ -206,7 +229,7 @@ export default function MirrorClient({
                         {r.entry_count_at_generation} entries
                       </span>
                     )}
-                    <span>{formatDate(r.created_at)}</span>
+                    <ClientDate iso={r.created_at} format="date" />
                   </div>
                 </div>
                 <h3 className="mt-2 text-base font-semibold text-foreground">
