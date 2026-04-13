@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignUpForm() {
@@ -33,6 +34,7 @@ export default function SignUpForm() {
     }
     // If email confirmation is disabled, a session is returned immediately.
     if (data.session) {
+      posthog.capture("user_signed_up");
       startTransition(() => {
         router.replace("/app");
         router.refresh();
@@ -40,6 +42,7 @@ export default function SignUpForm() {
       return;
     }
     // Otherwise, user must confirm via email first.
+    posthog.capture("user_signed_up");
     setInfo("Check your email for a confirmation link to finish signing up.");
   }
 

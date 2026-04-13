@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
 interface DeleteNoteButtonProps {
@@ -36,6 +37,8 @@ export default function DeleteNoteButton({ id }: DeleteNoteButtonProps) {
         setError(deleteError.message);
         return;
       }
+
+      posthog.capture("note_deleted");
 
       startTransition(() => {
         router.replace("/app");

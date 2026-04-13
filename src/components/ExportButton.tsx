@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
 interface ExportResponse {
@@ -57,6 +58,8 @@ export default function ExportButton() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      posthog.capture("vault_exported");
 
       setStatus("done");
       setMessage(

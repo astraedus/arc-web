@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
 export default function CreateNoteForm() {
@@ -45,6 +46,8 @@ export default function CreateNoteForm() {
       setError(insertError?.message ?? "Failed to save note.");
       return;
     }
+
+    posthog.capture("note_created", { has_mood: false });
 
     // Don't reset saving — the redirect will unmount this component.
     // Keeping the button disabled prevents double-submit.

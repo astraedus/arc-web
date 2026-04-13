@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import ClientDate from "@/components/ClientDate";
 import type { Reflection } from "@/lib/types";
@@ -72,6 +73,8 @@ export default function MirrorClient({
         return;
       }
 
+      posthog.capture("mirror_question_asked");
+
       const reflection = data?.reflection;
       if (reflection?.body) {
         setAnswer(reflection.body);
@@ -107,6 +110,7 @@ export default function MirrorClient({
         return;
       }
 
+      posthog.capture("mirror_reflection_generated", { type: "weekly" });
       setGenMessage("Weekly reflection generated.");
 
       // Add the new reflection to the list immediately if available
