@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import MirrorClient from "@/components/MirrorClient";
+import MirrorInsights from "@/components/MirrorInsights";
 import type { Reflection } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export default async function MirrorPage() {
   const list = (reflections ?? []) as Reflection[];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">The Mirror</h1>
         <p className="mt-1 text-sm text-warm-gray">
@@ -24,6 +25,8 @@ export default async function MirrorPage() {
       </div>
 
       <MirrorClient initialReflections={list} />
+
+      <MirrorInsights />
     </div>
   );
 }

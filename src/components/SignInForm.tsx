@@ -24,9 +24,16 @@ export default function SignInForm() {
       setError(signInError.message);
       return;
     }
-    const redirectTo = searchParams.get("redirectTo") || "/app";
+    // Only allow internal paths to prevent open-redirect.
+    const rawRedirect = searchParams.get("redirectTo") ?? "";
+    const safeRedirect =
+      rawRedirect.startsWith("/") &&
+      !rawRedirect.startsWith("//") &&
+      !rawRedirect.startsWith("/\\")
+        ? rawRedirect
+        : "/app";
     startTransition(() => {
-      router.replace(redirectTo);
+      router.replace(safeRedirect);
       router.refresh();
     });
   }

@@ -16,7 +16,6 @@ export default function NoteCard({ note, echoes }: NoteCardProps) {
   const showBadgeRow =
     note.mood_tag ||
     note.note_type !== "text" ||
-    note.location ||
     (note.theme_tags && note.theme_tags.length > 0);
 
   return (
@@ -25,13 +24,10 @@ export default function NoteCard({ note, echoes }: NoteCardProps) {
       className="block rounded-2xl border border-card-border bg-card p-6 transition-all hover:border-amber/30 hover:shadow-sm hover:bg-amber/[0.02] cursor-pointer"
     >
       <div className="flex items-center justify-between text-xs text-warm-gray-light">
-        <span className="uppercase tracking-wide">{note.note_type}</span>
-        <div className="flex items-center gap-2">
-          {note.location ? (
-            <span>{note.location}</span>
-          ) : null}
-          <ClientDate iso={note.created_at} format="date" />
-        </div>
+        <ClientDate iso={note.created_at} format="date" />
+        {note.location ? (
+          <span>{note.location}</span>
+        ) : null}
       </div>
 
       {showBadgeRow ? (

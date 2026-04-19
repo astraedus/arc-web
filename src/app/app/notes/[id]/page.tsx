@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import EditableNoteBody from "@/components/EditableNoteBody";
 import DeleteNoteButton from "@/components/DeleteNoteButton";
 import ClientDate from "@/components/ClientDate";
+import FocusMode from "@/components/FocusMode";
 import type { EntryTheme, Insight, JournalEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -46,16 +47,17 @@ export default async function NoteDetailPage({ params }: PageProps) {
 
   return (
     <article className="space-y-8">
-      <div>
+      <div className="flex items-center justify-between">
         <Link
           href="/app"
           className="text-sm text-warm-gray hover:text-foreground transition-colors"
         >
           Back to stream
         </Link>
+        <FocusMode content={note.content} date={note.created_at} />
       </div>
 
-      <header className="space-y-3">
+      <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-3 text-xs text-warm-gray-light">
           <span className="uppercase tracking-wide">{note.note_type}</span>
           <ClientDate iso={note.created_at} format="datetime" />
@@ -63,14 +65,6 @@ export default async function NoteDetailPage({ params }: PageProps) {
             <span>edited <ClientDate iso={note.updated_at} format="datetime" /></span>
           ) : null}
         </div>
-        <h1 className="text-3xl font-bold tracking-tight leading-tight">
-          {(() => {
-            const firstLine = note.content.split("\n")[0] || "";
-            if (firstLine.length <= 130) return firstLine || "Untitled note";
-            const truncated = firstLine.substring(0, 130).replace(/\s+\S*$/, "");
-            return (truncated || firstLine.substring(0, 130)) + "...";
-          })()}
-        </h1>
       </header>
 
       <EditableNoteBody id={note.id} content={note.content} />

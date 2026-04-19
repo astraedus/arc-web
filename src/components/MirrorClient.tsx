@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import ClientDate from "@/components/ClientDate";
@@ -11,10 +12,11 @@ interface MirrorClientProps {
   initialReflections: Reflection[];
 }
 
-function previewBody(text: string, lines = 3) {
-  const split = text.split("\n").filter((l) => l.trim());
-  const slice = split.slice(0, lines).join("\n");
-  return slice.length < text.length ? `${slice}...` : slice;
+function previewBody(text: string, lines = 6) {
+  // Preserve blank lines (paragraph breaks); just cap lines shown.
+  const split = text.split("\n");
+  if (split.length <= lines) return text;
+  return `${split.slice(0, lines).join("\n").trim()}\n\n...`;
 }
 
 function friendlyMirrorError(raw: string): string {
@@ -41,6 +43,8 @@ function friendlyMirrorError(raw: string): string {
 export default function MirrorClient({
   initialReflections,
 }: MirrorClientProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
@@ -51,6 +55,25 @@ export default function MirrorClient({
 
   const [reflections, setReflections] =
     useState<Reflection[]>(initialReflections);
+
+  // If ?ask=... is present in URL (from CommandPalette), prefill + auto-submit once.
+  const autoAskedRef = useRef(false);
+  useEffect(() => {
+    if (autoAskedRef.current) return;
+    const askParam = searchParams.get("ask");
+    if (!askParam) return;
+    autoAskedRef.current = true;
+    setQuestion(askParam);
+    // Strip the param so a refresh doesn't re-ask.
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("ask");
+    router.replace(`/app/mirror${params.toString() ? `?${params.toString()}` : ""}`);
+    // Submit shortly after mount.
+    setTimeout(() => {
+      const form = document.querySelector("form#ask-mirror-form");
+      if (form) (form as HTMLFormElement).requestSubmit();
+    }, 100);
+  }, [searchParams, router]);
 
   async function handleAsk(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -143,7 +166,7 @@ export default function MirrorClient({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray">
           Ask the Mirror
         </h2>
-        <form onSubmit={handleAsk} className="flex gap-3">
+        <form id="ask-mirror-form" onSubmit={handleAsk} className="flex gap-3">
           <input
             type="text"
             value={question}

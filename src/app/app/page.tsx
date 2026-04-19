@@ -1,19 +1,30 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SearchableStream from "@/components/SearchBar";
+import OnThisDay from "@/components/OnThisDay";
+import RiverOfTime from "@/components/RiverOfTime";
 import type { JournalEntry, EchoConnection } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function StreamPage() {
   const supabase = await createClient();
-  const { data: notes, error } = await supabase
-    .from("journal_entries")
-    .select(
-      "id, user_id, content, note_type, mood_tag, theme_tags, protected, location, weather, indexed_at, created_at, updated_at"
-    )
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const [notesRes, reflectionsRes] = await Promise.all([
+    supabase
+      .from("journal_entries")
+      .select(
+        "id, user_id, content, note_type, mood_tag, theme_tags, protected, location, weather, indexed_at, created_at, updated_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("reflections")
+      .select("id, title, reflection_type, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+  const { data: notes, error } = notesRes;
+  const reflections = reflectionsRes.data ?? [];
 
   const list = (notes ?? []) as JournalEntry[];
 
@@ -42,6 +53,15 @@ export default async function StreamPage() {
     }
   }
 
+  const riverEntries = list
+    .map((e) => ({
+      id: e.id,
+      content: e.content,
+      created_at: e.created_at,
+      mood_tag: e.mood_tag,
+    }))
+    .reverse(); // oldest first for the river
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -58,6 +78,22 @@ export default async function StreamPage() {
           New note
         </Link>
       </div>
+
+      <OnThisDay />
+
+      {list.length > 1 && (
+        <section className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+              The river
+            </h2>
+            <span className="text-xs italic text-warm-gray-light">
+              earlier ←→ now
+            </span>
+          </div>
+          <RiverOfTime entries={riverEntries} reflections={reflections} />
+        </section>
+      )}
 
       {error ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">

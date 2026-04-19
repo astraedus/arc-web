@@ -32,6 +32,12 @@ export default function AppNav({ email }: AppNavProps) {
             Mirror
           </Link>
           <Link
+            href="/app/graph"
+            className="text-warm-gray hover:text-foreground transition-colors"
+          >
+            Graph
+          </Link>
+          <Link
             href="/app/new"
             className="text-warm-gray hover:text-foreground transition-colors"
           >
@@ -43,8 +49,29 @@ export default function AppNav({ email }: AppNavProps) {
           >
             Profile
           </Link>
+          <button
+            type="button"
+            onClick={() => {
+              const ev = new KeyboardEvent("keydown", {
+                key: "k",
+                metaKey: true,
+                ctrlKey: true,
+                bubbles: true,
+              });
+              document.dispatchEvent(ev);
+            }}
+            className="hidden items-center gap-1.5 rounded-lg border border-card-border px-2.5 py-1 text-xs text-warm-gray transition-colors hover:border-amber/40 hover:text-foreground lg:flex"
+            aria-label="Open command palette"
+            title="Command palette (⌘K)"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+            <kbd className="font-medium">⌘K</kbd>
+          </button>
           {email ? (
-            <span className="hidden text-xs text-warm-gray-light sm:inline">
+            <span
+              className="hidden max-w-[160px] truncate text-xs text-warm-gray-light sm:inline"
+              title={email}
+            >
               {email}
             </span>
           ) : null}
@@ -116,6 +143,13 @@ export default function AppNav({ email }: AppNavProps) {
               className="text-warm-gray hover:text-foreground transition-colors py-1"
             >
               Mirror
+            </Link>
+            <Link
+              href="/app/graph"
+              onClick={() => setMenuOpen(false)}
+              className="text-warm-gray hover:text-foreground transition-colors py-1"
+            >
+              Graph
             </Link>
             <Link
               href="/app/new"
