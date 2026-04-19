@@ -20,7 +20,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <AppNav email={user.email ?? null} />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
         {children}
       </main>
       <CommandPalette />

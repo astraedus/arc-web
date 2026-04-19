@@ -16,7 +16,7 @@ export default async function MirrorPage() {
   const list = (reflections ?? []) as Reflection[];
 
   return (
-    <div className="space-y-10">
+    <div className="mx-auto max-w-4xl space-y-10">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">The Mirror</h1>
         <p className="mt-1 text-sm text-warm-gray">

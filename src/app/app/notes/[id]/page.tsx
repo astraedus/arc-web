@@ -46,7 +46,7 @@ export default async function NoteDetailPage({ params }: PageProps) {
   const insightList = (insights ?? []) as Insight[];
 
   return (
-    <article className="space-y-8">
+    <article className="mx-auto max-w-3xl space-y-8">
       <div className="flex items-center justify-between">
         <Link
           href="/app"
