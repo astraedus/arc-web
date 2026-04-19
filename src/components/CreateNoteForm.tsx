@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
@@ -20,13 +20,14 @@ export default function CreateNoteForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [saving, setSaving] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  // ⌘+Enter to save
+  // ⌘+Enter to save — scope to THIS form (not the global signout form in AppNav).
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        const form = document.querySelector("form");
-        if (form) (form as HTMLFormElement).requestSubmit();
+        e.preventDefault();
+        formRef.current?.requestSubmit();
       }
     }
     document.addEventListener("keydown", onKey);
@@ -78,7 +79,7 @@ export default function CreateNoteForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}

@@ -46,7 +46,24 @@ export default async function MirrorInsights() {
     .limit(50);
 
   const insights = (data ?? []) as Insight[];
-  if (insights.length === 0) return null;
+
+  if (insights.length === 0) {
+    return (
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+          What the Mirror has noticed
+        </h2>
+        <div className="rounded-2xl border border-dashed border-card-border bg-card p-8 text-center">
+          <p className="text-sm text-warm-gray">
+            Patterns, threads, and connections will appear here as you write.
+          </p>
+          <p className="mt-2 text-xs italic text-warm-gray-light">
+            The Mirror starts noticing around 10 entries.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   // Group by type
   const grouped = insights.reduce<Record<string, Insight[]>>((acc, i) => {

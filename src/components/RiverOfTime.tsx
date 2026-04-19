@@ -176,22 +176,27 @@ export default function RiverOfTime({
           {bands.map((b, i) => {
             if (b.kind === "gap") {
               const label = describeGap(b.days);
+              const width = Math.min(80, 20 + Math.log2(b.days) * 8);
               return (
                 <div
                   key={`gap-${i}`}
-                  className="group relative flex shrink-0 flex-col items-center justify-center px-3"
+                  className="group relative flex shrink-0 flex-col items-center justify-end px-2"
+                  style={{ minHeight: 96 }}
                   title={`${b.days} days between ${b.from} and ${b.to}`}
                 >
-                  <div className="h-[3px] w-12 bg-warm-gray-light/20" />
+                  <div
+                    className="border-b-2 border-dotted border-warm-gray-light/40"
+                    style={{ width: `${width}px` }}
+                  />
                   {label && (
-                    <span className="mt-1 whitespace-nowrap text-[9px] italic text-warm-gray-light opacity-70 group-hover:opacity-100">
+                    <span className="mt-1.5 whitespace-nowrap text-[10px] italic text-warm-gray-light">
                       {label}
                     </span>
                   )}
                 </div>
               );
             }
-            // Day band — one ring per entry, mood-colored, stacked vertically
+            // Day column - stones stacked vertically, mood-colored, click navigates.
             const dayHover = hover === b.day;
             const refs = reflectionsByMonth.get(monthKey(b.day)) ?? [];
             const hasReflection = refs.some(
@@ -200,34 +205,37 @@ export default function RiverOfTime({
             return (
               <div
                 key={b.day}
-                className="group relative flex shrink-0 flex-col items-center"
+                className="group relative flex shrink-0 flex-col items-center justify-end px-0.5"
+                style={{ minHeight: 96 }}
                 onMouseEnter={() => setHover(b.day)}
                 onMouseLeave={() => setHover(null)}
               >
-                <div className="flex flex-col items-center gap-px py-1">
+                <div className="flex flex-col items-center gap-1 py-1">
                   {b.items.map((e) => {
-                    const w = Math.max(
-                      4,
-                      Math.min(28, 4 + (e.content?.length ?? 0) / 50)
+                    const len = e.content?.length ?? 0;
+                    const h = Math.max(
+                      8,
+                      Math.min(28, 8 + Math.sqrt(len) * 0.9)
                     );
                     return (
                       <button
                         key={e.id}
                         type="button"
                         onClick={() => router.push(`/app/notes/${e.id}`)}
-                        className="block h-1.5 rounded transition-all hover:scale-y-[2.5]"
+                        className="block w-3 rounded-sm border border-transparent transition-all hover:scale-110 hover:border-foreground/20"
                         style={{
-                          width: `${w}px`,
+                          height: `${h}px`,
                           background: moodColor(e.mood_tag),
                         }}
-                        aria-label={fullDate(e.created_at)}
+                        aria-label={`${fullDate(e.created_at)} (${len} chars)`}
+                        title={`${fullDate(e.created_at)} - ${e.mood_tag ?? "no mood"}`}
                       />
                     );
                   })}
                 </div>
                 {hasReflection && (
                   <span
-                    className="-mt-0.5 h-1.5 w-1.5 rounded-full bg-amber-dark"
+                    className="-mt-0.5 h-2 w-2 rounded-full bg-amber-dark ring-2 ring-amber/30"
                     aria-label="Reflection"
                     title="Reflection on this day"
                   />
@@ -239,6 +247,7 @@ export default function RiverOfTime({
                     </div>
                     <div className="text-warm-gray-light">
                       {b.items.length} {b.items.length === 1 ? "entry" : "entries"}
+                      {hasReflection ? " + reflection" : ""}
                     </div>
                   </div>
                 )}

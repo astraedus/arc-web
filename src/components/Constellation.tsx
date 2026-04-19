@@ -197,11 +197,13 @@ export default function Constellation({
           height={size.height}
           graphData={data}
           backgroundColor="#FAFAF8"
-          nodeRelSize={1}
+          nodeRelSize={6}
           // @ts-expect-error - lib types are loose
-          nodeVal={(n) => Math.PI * Math.pow(nodeRadius(n), 2)}
+          nodeVal={(n) => Math.pow(nodeRadius(n) / 4, 2)}
           // @ts-expect-error - lib types are loose
           nodeColor={(n) => nodeColor(n)}
+          enableNodeDrag={false}
+          enablePointerInteraction={true}
           linkColor={(l) => {
             if ((l as GraphLink).kind === "echo") return "rgba(232, 168, 73, 0.45)";
             if ((l as GraphLink).kind === "reflection") return "rgba(200, 139, 46, 0.20)";
@@ -210,6 +212,9 @@ export default function Constellation({
           linkWidth={(l) => ((l as GraphLink).kind === "echo" ? 1.4 : 0.8)}
           cooldownTicks={120}
           onNodeHover={(node) => {
+            if (typeof document !== "undefined") {
+              document.body.style.cursor = node ? "pointer" : "default";
+            }
             if (!node) {
               setHover(null);
               return;
@@ -249,6 +254,7 @@ export default function Constellation({
               router.push(`/app/mirror/${n.id.replace(/^r:/, "")}`);
             }
           }}
+          onBackgroundClick={() => setHover(null)}
           nodeCanvasObjectMode={() => "after"}
           nodeCanvasObject={(node, ctx, globalScale) => {
             const n = node as

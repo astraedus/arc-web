@@ -174,6 +174,7 @@ export default function CommandPalette() {
                     <Command.Item
                       value={`ask-mirror-${trimmed}`}
                       onSelect={() => ask(trimmed)}
+                      onClick={() => ask(trimmed)}
                       className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-sm aria-selected:bg-amber/10 aria-selected:text-foreground"
                     >
                       <span>
@@ -202,6 +203,7 @@ export default function CommandPalette() {
                       key={item.href}
                       value={`nav-${item.label}`}
                       onSelect={() => go(item.href)}
+                      onClick={() => go(item.href)}
                       className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 text-sm aria-selected:bg-amber/10 aria-selected:text-foreground"
                     >
                       <span>{item.label}</span>
@@ -234,6 +236,7 @@ export default function CommandPalette() {
                           key={entry.id}
                           value={`entry-${entry.id}-${entry.content?.slice(0, 50)}`}
                           onSelect={() => go(`/app/notes/${entry.id}`)}
+                          onClick={() => go(`/app/notes/${entry.id}`)}
                           className="flex cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2.5 text-sm aria-selected:bg-amber/10 aria-selected:text-foreground"
                         >
                           <div className="flex-1 min-w-0">
@@ -277,6 +280,7 @@ export default function CommandPalette() {
                           key={r.id}
                           value={`refl-${r.id}-${r.title}`}
                           onSelect={() => go(`/app/mirror/${r.id}`)}
+                          onClick={() => go(`/app/mirror/${r.id}`)}
                           className="flex cursor-pointer items-start justify-between gap-3 rounded-lg px-3 py-2.5 text-sm aria-selected:bg-amber/10 aria-selected:text-foreground"
                         >
                           <div className="flex-1 min-w-0">
