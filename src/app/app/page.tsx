@@ -73,7 +73,7 @@ export default async function StreamPage() {
         </div>
         <Link
           href="/app/new"
-          className="rounded-lg bg-amber px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-dark"
+          className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
         >
           New note
         </Link>
@@ -108,7 +108,7 @@ export default async function StreamPage() {
           </p>
           <Link
             href="/app/new"
-            className="mt-6 inline-block rounded-lg bg-amber px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-dark"
+            className="mt-6 inline-block rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
           >
             Write your first entry
           </Link>

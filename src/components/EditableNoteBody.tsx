@@ -84,7 +84,7 @@ export default function EditableNoteBody({ id, content }: EditableNoteBodyProps)
             type="button"
             onClick={handleSave}
             disabled={saving || isPending}
-            className="rounded-lg bg-amber px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-dark disabled:opacity-60"
+            className="rounded-lg bg-amber px-5 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark disabled:opacity-60"
           >
             {saving || isPending ? "Saving..." : "Save"}
           </button>

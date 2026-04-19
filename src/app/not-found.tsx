@@ -17,7 +17,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/app"
-        className="mt-8 inline-block rounded-lg bg-amber px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-amber-dark"
+        className="mt-8 inline-block rounded-lg bg-amber px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
       >
         Go to Stream
       </Link>
