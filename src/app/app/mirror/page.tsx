@@ -16,17 +16,35 @@ export default async function MirrorPage() {
   const list = (reflections ?? []) as Reflection[];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">The Mirror</h1>
-        <p className="mt-1 text-sm text-warm-gray">
+    <div className="mx-auto max-w-4xl">
+      <header className="pt-4 pb-16 text-center">
+        <p className="text-[11px] uppercase tracking-[0.25em] text-warm-gray-light">
+          The Mirror
+        </p>
+        <p
+          className="mt-4 text-2xl italic text-foreground"
+          style={{
+            fontFamily:
+              "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
+          }}
+        >
           Your journal, reflected back to you.
         </p>
+      </header>
+
+      <section className="mb-24">
+        <MirrorClient initialReflections={list} />
+      </section>
+
+      <section className="border-t border-card-border pt-16">
+        <MirrorInsights />
+      </section>
+
+      <div className="mt-24 mb-8 text-center">
+        <span className="text-warm-gray-light/40 text-xs tracking-[0.3em]">
+          • • •
+        </span>
       </div>
-
-      <MirrorClient initialReflections={list} />
-
-      <MirrorInsights />
     </div>
   );
 }

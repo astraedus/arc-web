@@ -18,36 +18,41 @@ export default function AppNav({ email }: AppNavProps) {
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 text-sm md:flex">
+        <nav className="hidden items-center gap-7 text-sm md:flex">
           <Link
             href="/app"
-            className="text-warm-gray hover:text-foreground transition-colors"
+            className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            Stream
+            <span className="opacity-70 group-hover:opacity-100">🌊</span>
+            <span>Stream</span>
           </Link>
           <Link
             href="/app/mirror"
-            className="text-warm-gray hover:text-foreground transition-colors"
+            className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            Mirror
+            <span className="opacity-70 group-hover:opacity-100">🪞</span>
+            <span>Mirror</span>
           </Link>
           <Link
             href="/app/graph"
-            className="text-warm-gray hover:text-foreground transition-colors"
+            className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            Graph
+            <span className="opacity-70 group-hover:opacity-100">✦</span>
+            <span>Graph</span>
           </Link>
           <Link
             href="/app/new"
-            className="text-warm-gray hover:text-foreground transition-colors"
+            className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            New note
+            <span className="opacity-70 group-hover:opacity-100">✎</span>
+            <span>Write</span>
           </Link>
           <Link
             href="/app/profile"
-            className="text-warm-gray hover:text-foreground transition-colors"
+            className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            Profile
+            <span className="opacity-70 group-hover:opacity-100">◎</span>
+            <span>You</span>
           </Link>
           <button
             type="button"
@@ -133,37 +138,42 @@ export default function AppNav({ email }: AppNavProps) {
             <Link
               href="/app"
               onClick={() => setMenuOpen(false)}
-              className="text-warm-gray hover:text-foreground transition-colors py-1"
+              className="flex items-center gap-2 text-warm-gray hover:text-foreground transition-colors py-1"
             >
-              Stream
+              <span>🌊</span>
+              <span>Stream</span>
             </Link>
             <Link
               href="/app/mirror"
               onClick={() => setMenuOpen(false)}
-              className="text-warm-gray hover:text-foreground transition-colors py-1"
+              className="flex items-center gap-2 text-warm-gray hover:text-foreground transition-colors py-1"
             >
-              Mirror
+              <span>🪞</span>
+              <span>Mirror</span>
             </Link>
             <Link
               href="/app/graph"
               onClick={() => setMenuOpen(false)}
-              className="text-warm-gray hover:text-foreground transition-colors py-1"
+              className="flex items-center gap-2 text-warm-gray hover:text-foreground transition-colors py-1"
             >
-              Graph
+              <span>✦</span>
+              <span>Graph</span>
             </Link>
             <Link
               href="/app/new"
               onClick={() => setMenuOpen(false)}
-              className="text-warm-gray hover:text-foreground transition-colors py-1"
+              className="flex items-center gap-2 text-warm-gray hover:text-foreground transition-colors py-1"
             >
-              New note
+              <span>✎</span>
+              <span>Write</span>
             </Link>
             <Link
               href="/app/profile"
               onClick={() => setMenuOpen(false)}
-              className="text-warm-gray hover:text-foreground transition-colors py-1"
+              className="flex items-center gap-2 text-warm-gray hover:text-foreground transition-colors py-1"
             >
-              Profile
+              <span>◎</span>
+              <span>You</span>
             </Link>
             {email ? (
               <span className="text-xs text-warm-gray-light">{email}</span>

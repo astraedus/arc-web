@@ -55,30 +55,45 @@ export default function SearchableStream({ initialNotes, echoMap }: SearchableSt
   const notes = results !== null ? results : initialNotes;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="relative">
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-warm-gray-light/60">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+        </span>
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search your notes..."
-          className="w-full rounded-2xl border border-card-border bg-card px-5 py-3 text-sm text-foreground placeholder:text-warm-gray-light transition-colors focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
+          placeholder="Look back through it all..."
+          className="w-full rounded-full border border-card-border bg-transparent py-3 pl-11 pr-12 text-sm text-foreground placeholder:italic placeholder:text-warm-gray-light/70 transition-all focus-visible:bg-card focus-visible:border-amber/40 focus-visible:outline-none"
         />
         {searching ? (
-          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-warm-gray-light">
-            Searching...
+          <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] italic text-warm-gray-light">
+            looking...
           </span>
+        ) : query ? (
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-warm-gray-light hover:text-warm-gray"
+            aria-label="Clear search"
+          >
+            ×
+          </button>
         ) : null}
       </div>
 
       {notes.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-card-border bg-card p-8 text-center">
-          <p className="text-sm text-warm-gray">
-            {query.trim() ? "No notes match your search." : "No notes yet."}
+        <div className="rounded-2xl border border-dashed border-card-border bg-card p-10 text-center">
+          <p className="text-sm italic text-warm-gray">
+            {query.trim() ? "Nothing here on that thread." : "No notes yet."}
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {notes.map((note) => (
             <NoteCard
               key={note.id}

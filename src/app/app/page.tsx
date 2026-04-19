@@ -63,59 +63,91 @@ export default async function StreamPage() {
     .reverse(); // oldest first for the river
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Your stream</h1>
-          <p className="mt-1 text-sm text-warm-gray">
-            Every note, newest first.
-          </p>
-        </div>
-        <Link
-          href="/app/new"
-          className="rounded-lg bg-amber px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
-        >
-          New note
-        </Link>
-      </div>
+    <div className="mx-auto max-w-4xl">
+      {/* Quiet header — minimal, no shouty CTA */}
+      <header className="pt-4 pb-16 text-center">
+        <p className="text-[11px] uppercase tracking-[0.25em] text-warm-gray-light">
+          Your arc
+        </p>
+        <p className="mt-3 text-sm italic text-warm-gray">
+          {list.length === 0
+            ? "Where you are right now."
+            : list.length === 1
+              ? "One stone placed. The arc has begun."
+              : `${list.length} ${list.length === 1 ? "entry" : "entries"} so far.`}
+        </p>
+      </header>
 
-      <OnThisDay />
+      {/* On This Day -- the most emotional surface comes first */}
+      <section className="mb-24">
+        <OnThisDay />
+      </section>
 
+      {/* The river -- own breathing room */}
       {list.length > 1 && (
-        <section className="space-y-2">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+        <section className="mb-24 space-y-4">
+          <div className="text-center">
+            <p className="text-[11px] uppercase tracking-[0.25em] text-warm-gray-light">
               The river
-            </h2>
-            <span className="text-xs italic text-warm-gray-light">
-              earlier ←→ now
-            </span>
+            </p>
+            <p className="mt-2 text-xs italic text-warm-gray">
+              earlier on the left, now on the right
+            </p>
           </div>
           <RiverOfTime entries={riverEntries} reflections={reflections} />
         </section>
       )}
 
-      {error ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-          Failed to load notes: {error.message}
-        </div>
-      ) : list.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-card-border bg-card p-12 text-center">
-          <h2 className="text-lg font-semibold">Start your arc.</h2>
-          <p className="mt-2 text-sm text-warm-gray">
-            Write your first entry. Your journal grows from here -- the Mirror,
-            the mind map, and your insights all begin with a single note.
-          </p>
+      {/* Stream -- the actual entries */}
+      <section className="space-y-6">
+        <div className="flex items-baseline justify-between border-t border-card-border pt-10">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-warm-gray-light">
+              The stream
+            </p>
+            <p className="mt-2 text-xs italic text-warm-gray">
+              every entry, newest first
+            </p>
+          </div>
           <Link
             href="/app/new"
-            className="mt-6 inline-block rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
+            className="rounded-full border border-card-border bg-card px-4 py-1.5 text-xs text-warm-gray transition-colors hover:border-amber/40 hover:text-foreground"
           >
-            Write your first entry
+            <span className="mr-1.5">✎</span>write
           </Link>
         </div>
-      ) : (
-        <SearchableStream initialNotes={list} echoMap={echoMap} />
-      )}
+
+        {error ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+            Failed to load notes: {error.message}
+          </div>
+        ) : list.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-card-border bg-card p-16 text-center">
+            <p className="text-base italic text-warm-gray">
+              Where are you right now?
+            </p>
+            <p className="mx-auto mt-3 max-w-sm text-xs text-warm-gray-light">
+              Not your location. Your life. Write your first honest entry.
+              The Mirror, the river, the constellation all begin with this.
+            </p>
+            <Link
+              href="/app/new"
+              className="mt-8 inline-block rounded-lg bg-amber px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
+            >
+              Begin your arc
+            </Link>
+          </div>
+        ) : (
+          <SearchableStream initialNotes={list} echoMap={echoMap} />
+        )}
+      </section>
+
+      {/* Quiet bottom marker */}
+      <div className="mt-24 mb-8 text-center">
+        <span className="text-warm-gray-light/40 text-xs tracking-[0.3em]">
+          • • •
+        </span>
+      </div>
     </div>
   );
 }
