@@ -1,7 +1,7 @@
 export type NoteType = "text" | "voice" | "sticky";
 
 export type TranscriptionSource =
-  | "whisper_groq"
+  | "gemini_flash"
   | "native_ios"
   | "native_android"
   | "manual";

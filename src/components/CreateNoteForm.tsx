@@ -15,7 +15,9 @@ const MOODS: Array<{ key: string; label: string; color: string }> = [
   { key: "alive", label: "alive", color: "#D97706" },
 ];
 
-type TranscriptionSource = "manual" | "whisper_groq";
+type TranscriptionSource = "manual" | "gemini_flash";
+
+
 
 export default function CreateNoteForm() {
   const router = useRouter();
@@ -51,7 +53,7 @@ export default function CreateNoteForm() {
   function handleVoiceTranscript(transcript: string) {
     setError(null);
     setOrganizeError(null);
-    setTranscriptionSource("whisper_groq");
+    setTranscriptionSource("gemini_flash");
     setOrganizedByAi(false);
     setContent((prev) => {
       const merged = prev.trim().length > 0 ? `${prev.trim()} ${transcript}` : transcript;
@@ -135,7 +137,8 @@ export default function CreateNoteForm() {
       .insert({
         user_id: user.id,
         content: content.trim(),
-        note_type: transcriptionSource === "whisper_groq" ? "voice" : "text",
+        note_type: transcriptionSource === "gemini_flash" ? "voice" : "text",
+        // Note: source-string check above intentional; if more sources are added later, update both spots.
         mood_tag: mood,
         ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
       })

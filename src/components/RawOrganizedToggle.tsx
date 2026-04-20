@@ -12,7 +12,7 @@ interface RawOrganizedToggleProps {
 type Mode = "organized" | "raw" | "both";
 
 const SOURCE_LABEL: Record<string, string> = {
-  whisper_groq: "Whisper (Groq)",
+  gemini_flash: "Gemini Flash",
   native_ios: "iOS native voice",
   native_android: "Android native voice",
   manual: "typed",

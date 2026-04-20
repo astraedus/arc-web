@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export type TranscriptionResult = {
   transcript: string;
-  source: "whisper_groq";
+  source: "gemini_flash";
   duration_seconds: number | null;
   detected_language: string | null;
 };
@@ -85,7 +85,7 @@ export async function transcribeAudio(
 
   return {
     transcript: (parsed.transcript ?? "").trim(),
-    source: "whisper_groq",
+    source: "gemini_flash",
     duration_seconds: parsed.duration_seconds ?? null,
     detected_language: parsed.detected_language ?? null,
   };
@@ -104,7 +104,7 @@ function friendly(status: number, body: string): string {
   if (status === 401) return "Your session has expired. Sign in again.";
   if (status === 413) return "That recording is too long for one upload. Try a shorter clip.";
   if (status === 502) return "The transcription service is unreachable right now. Try again in a moment.";
-  if (status === 500) return "The transcription service is misconfigured. Anti needs to set GROQ_API_KEY.";
+  if (status === 500) return "The transcription service is misconfigured. Anti needs to set GEMINI_API_KEY.";
   // Try to extract error.message from JSON body if present
   try {
     const j = JSON.parse(body);
