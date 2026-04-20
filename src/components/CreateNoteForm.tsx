@@ -6,11 +6,11 @@ import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
 const MOODS: Array<{ key: string; label: string; color: string }> = [
-  { key: "struggling", label: "struggling", color: "#7B92A8" },
-  { key: "uncertain", label: "uncertain", color: "#A8B89A" },
-  { key: "steady", label: "steady", color: "#E8DDC3" },
-  { key: "hopeful", label: "hopeful", color: "#FFC785" },
-  { key: "alive", label: "alive", color: "#F5A623" },
+  { key: "struggling", label: "struggling", color: "#5A748F" },
+  { key: "uncertain", label: "uncertain", color: "#7C8E6B" },
+  { key: "steady", label: "steady", color: "#A88B5C" },
+  { key: "hopeful", label: "hopeful", color: "#E8A849" },
+  { key: "alive", label: "alive", color: "#D97706" },
 ];
 
 export default function CreateNoteForm() {
@@ -83,10 +83,10 @@ export default function CreateNoteForm() {
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="Dump it here. Anything. Arc will organize it later."
+        placeholder="however it lands. nothing has to be polished."
         rows={14}
         autoFocus
-        className="w-full rounded-2xl border border-card-border bg-card p-6 text-base leading-relaxed text-foreground placeholder:text-warm-gray-light"
+        className="w-full rounded-2xl border border-card-border bg-card p-6 text-base leading-relaxed text-foreground placeholder:italic placeholder:text-warm-gray-light"
       />
 
       {/* Optional mood */}

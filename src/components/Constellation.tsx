@@ -56,17 +56,17 @@ export type ConstellationProps = {
 };
 
 const MOOD_PALETTE: Record<string, string> = {
-  alive: "#F5A623",
-  hopeful: "#FFC785",
-  steady: "#E8DDC3",
-  uncertain: "#A8B89A",
-  struggling: "#7B92A8",
+  alive: "#D97706",
+  hopeful: "#E8A849",
+  steady: "#A88B5C",
+  uncertain: "#7C8E6B",
+  struggling: "#5A748F",
 };
 
 function moodColor(mood: string | null): string {
-  if (!mood) return "#E8DDC3";
+  if (!mood) return "#A88B5C";
   const k = mood.toLowerCase();
-  return MOOD_PALETTE[k] ?? "#E8DDC3";
+  return MOOD_PALETTE[k] ?? "#A88B5C";
 }
 
 function snippet(text: string, max = 200) {
@@ -82,6 +82,7 @@ export default function Constellation({
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 800, height: 600 });
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [hover, setHover] = useState<
     | { type: "entry"; id: string; label: string; date: string; mood: string | null }
     | { type: "reflection"; id: string; label: string; date: string; rtype: string }
@@ -197,13 +198,14 @@ export default function Constellation({
           height={size.height}
           graphData={data}
           backgroundColor="#FAFAF8"
-          nodeRelSize={6}
+          nodeRelSize={1}
           // @ts-expect-error - lib types are loose
-          nodeVal={(n) => Math.pow(nodeRadius(n) / 4, 2)}
+          nodeVal={(n) => Math.pow(nodeRadius(n), 2)}
           // @ts-expect-error - lib types are loose
           nodeColor={(n) => nodeColor(n)}
           enableNodeDrag={false}
           enablePointerInteraction={true}
+          warmupTicks={50}
           linkColor={(l) => {
             if ((l as GraphLink).kind === "echo") return "rgba(232, 168, 73, 0.45)";
             if ((l as GraphLink).kind === "reflection") return "rgba(200, 139, 46, 0.20)";
@@ -216,6 +218,7 @@ export default function Constellation({
               document.body.style.cursor = node ? "pointer" : "default";
             }
             if (!node) {
+              setHoveredId(null);
               setHover(null);
               return;
             }
@@ -223,6 +226,7 @@ export default function Constellation({
               | GraphEntryNode
               | GraphReflectionNode
               | GraphThemeNode;
+            setHoveredId(n.id);
             if (n.type === "entry") {
               setHover({
                 type: "entry",
@@ -244,37 +248,65 @@ export default function Constellation({
             }
           }}
           onNodeClick={(node) => {
-            const n = node as
-              | GraphEntryNode
-              | GraphReflectionNode
-              | GraphThemeNode;
-            if (n.type === "entry") {
-              router.push(`/app/notes/${n.id.replace(/^e:/, "")}`);
-            } else if (n.type === "reflection") {
-              router.push(`/app/mirror/${n.id.replace(/^r:/, "")}`);
+            const raw = (node as { id?: string })?.id ?? "";
+            // Strip our prefix and route based on it. Defensive: log if unexpected.
+            if (raw.startsWith("e:")) {
+              router.push(`/app/notes/${raw.slice(2)}`);
+            } else if (raw.startsWith("r:")) {
+              router.push(`/app/mirror/${raw.slice(2)}`);
+            } else if (typeof console !== "undefined") {
+              console.log("[Constellation] click on non-routable node:", raw);
             }
           }}
-          onBackgroundClick={() => setHover(null)}
-          nodeCanvasObjectMode={() => "after"}
+          onBackgroundClick={() => {
+            setHoveredId(null);
+            setHover(null);
+          }}
+          nodeCanvasObjectMode={(node) => {
+            const n = node as { id?: string; type?: string };
+            // Always label themes (they're the navigational anchors)
+            if (n.type === "theme") return "after";
+            // Otherwise only label the currently-hovered node
+            return n.id === hoveredId ? "after" : undefined;
+          }}
           nodeCanvasObject={(node, ctx, globalScale) => {
             const n = node as
               | GraphEntryNode
               | GraphReflectionNode
               | GraphThemeNode;
-            // Only label themes always; entries/reflections only when zoomed in
-            if (n.type !== "theme" && globalScale < 1.4) return;
+            const isHovered = n.id === hoveredId;
             const fontSize =
-              n.type === "theme" ? 11 / globalScale : 10 / globalScale;
-            ctx.font = `${n.type === "theme" ? "600" : "400"} ${fontSize}px ui-sans-serif, system-ui`;
+              n.type === "theme"
+                ? Math.max(10, 11 / globalScale)
+                : Math.max(11, 12 / globalScale);
+            ctx.font = `${n.type === "theme" ? "600" : isHovered ? "500" : "400"} ${fontSize}px ui-sans-serif, system-ui`;
             ctx.fillStyle = n.type === "theme" ? "#6B6560" : "#2B2822";
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             const r = nodeRadius(n);
             const positioned = node as { x?: number; y?: number };
+            const label =
+              n.type === "theme"
+                ? n.label
+                : n.label.length > 60
+                  ? n.label.slice(0, 60) + "..."
+                  : n.label;
+            // Subtle background pill on hover so labels read against any color
+            if (isHovered) {
+              const w = ctx.measureText(label).width;
+              ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+              ctx.fillRect(
+                (positioned.x ?? 0) - w / 2 - 4,
+                (positioned.y ?? 0) + r + 1,
+                w + 8,
+                fontSize + 4
+              );
+              ctx.fillStyle = "#2B2822";
+            }
             ctx.fillText(
-              n.label,
+              label,
               positioned.x ?? 0,
-              (positioned.y ?? 0) + r + 2
+              (positioned.y ?? 0) + r + 3
             );
           }}
         />

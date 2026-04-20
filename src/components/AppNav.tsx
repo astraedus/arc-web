@@ -23,35 +23,35 @@ export default function AppNav({ email }: AppNavProps) {
             href="/app"
             className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            <span className="opacity-70 group-hover:opacity-100">🌊</span>
+            <span className="opacity-100">🌊</span>
             <span>Stream</span>
           </Link>
           <Link
             href="/app/mirror"
             className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            <span className="opacity-70 group-hover:opacity-100">🪞</span>
+            <span className="opacity-100">🪞</span>
             <span>Mirror</span>
           </Link>
           <Link
             href="/app/graph"
             className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            <span className="opacity-70 group-hover:opacity-100">✦</span>
+            <span className="opacity-100">✦</span>
             <span>Graph</span>
           </Link>
           <Link
             href="/app/new"
             className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            <span className="opacity-70 group-hover:opacity-100">✎</span>
+            <span className="opacity-100">✎</span>
             <span>Write</span>
           </Link>
           <Link
             href="/app/profile"
             className="group flex items-center gap-1.5 text-warm-gray hover:text-foreground transition-colors"
           >
-            <span className="opacity-70 group-hover:opacity-100">◎</span>
+            <span className="opacity-100">◎</span>
             <span>You</span>
           </Link>
           <button
@@ -83,9 +83,9 @@ export default function AppNav({ email }: AppNavProps) {
           <form action="/signout" method="post">
             <button
               type="submit"
-              className="rounded-lg border border-card-border px-3 py-1.5 text-xs text-warm-gray transition-colors hover:border-amber/40 hover:text-foreground"
+              className="text-xs text-warm-gray-light transition-colors hover:text-warm-gray"
             >
-              Sign out
+              sign out
             </button>
           </form>
         </nav>
@@ -181,9 +181,9 @@ export default function AppNav({ email }: AppNavProps) {
             <form action="/signout" method="post">
               <button
                 type="submit"
-                className="rounded-lg border border-card-border px-3 py-1.5 text-xs text-warm-gray transition-colors hover:border-amber/40 hover:text-foreground"
+                className="text-xs text-warm-gray-light transition-colors hover:text-warm-gray"
               >
-                Sign out
+                sign out
               </button>
             </form>
           </div>

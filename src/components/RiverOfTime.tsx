@@ -17,16 +17,16 @@ type Reflection = {
 };
 
 const MOOD_COLOR: Record<string, string> = {
-  alive: "#F5A623",
-  hopeful: "#FFC785",
-  steady: "#E8DDC3",
-  uncertain: "#A8B89A",
-  struggling: "#7B92A8",
+  alive: "#D97706",      // amber-600 (darker, vibrant)
+  hopeful: "#E8A849",    // amber accent
+  steady: "#A88B5C",     // muted bronze (visible on cream)
+  uncertain: "#7C8E6B",  // moss
+  struggling: "#5A748F", // dusty blue
 };
 
 function moodColor(m: string | null) {
-  if (!m) return "#E8DDC3";
-  return MOOD_COLOR[m.toLowerCase()] ?? "#E8DDC3";
+  if (!m) return "#A88B5C";
+  return MOOD_COLOR[m.toLowerCase()] ?? "#A88B5C";
 }
 
 function dayKey(iso: string) {
@@ -222,10 +222,11 @@ export default function RiverOfTime({
                         key={e.id}
                         type="button"
                         onClick={() => router.push(`/app/notes/${e.id}`)}
-                        className="block w-3 rounded-sm border border-transparent transition-all hover:scale-110 hover:border-foreground/20"
+                        className="block w-3 rounded-sm transition-all hover:scale-125 hover:shadow-md"
                         style={{
                           height: `${h}px`,
                           background: moodColor(e.mood_tag),
+                          boxShadow: "inset 0 0 0 0.5px rgba(43, 40, 34, 0.18)",
                         }}
                         aria-label={`${fullDate(e.created_at)} (${len} chars)`}
                         title={`${fullDate(e.created_at)} - ${e.mood_tag ?? "no mood"}`}
