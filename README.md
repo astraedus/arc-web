@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Arc Web
 
-## Getting Started
+Arc Web is the browser vault for Arc, the journaling product built around an honest diary and a longitudinal AI mirror. It gives signed-in users a calmer desktop surface for reading, searching, exporting, and exploring their writing history.
 
-First, run the development server:
+Live URLs:
+- App: https://arc-web-pi.vercel.app
+- Landing page: https://arc-landing-pi.vercel.app
+
+## What It Includes
+
+- Supabase auth and server-rendered session handling
+- Stream view for journal entries
+- Mirror reflections and question flow
+- Constellation and River of Time visualizations
+- Vault export controls
+- Voice transcription via the Supabase `transcribe-audio` edge function
+
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Copy the example env file and fill in real values:
+
+```bash
+cp .env.example .env.local
+```
+
+3. Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Required for local development:
 
-## Learn More
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-To learn more about Next.js, take a look at the following resources:
+Optional but recommended:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `NEXT_PUBLIC_SENTRY_DSN`
+- `NEXT_PUBLIC_POSTHOG_KEY`
+- `NEXT_PUBLIC_POSTHOG_HOST`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Documented placeholders for planned server-side work:
 
-## Deploy on Vercel
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `STRIPE_SECRET_KEY`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev
+npm run build
+npm run lint
+```
+
+## Notes
+
+- The transcription flow expects the Supabase edge function at `functions/v1/transcribe-audio`.
+- PostHog is installed but the provider is currently disabled until the live key is restored.
+- This repo is one surface of the broader Arc product. The landing page lives separately in `../arc-landing`.

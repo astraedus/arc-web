@@ -104,7 +104,7 @@ function friendly(status: number, body: string): string {
   if (status === 401) return "Your session has expired. Sign in again.";
   if (status === 413) return "That recording is too long for one upload. Try a shorter clip.";
   if (status === 502) return "The transcription service is unreachable right now. Try again in a moment.";
-  if (status === 500) return "The transcription service is misconfigured. Anti needs to set GEMINI_API_KEY.";
+  if (status === 500) return "Transcription service is not configured.";
   // Try to extract error.message from JSON body if present
   try {
     const j = JSON.parse(body);
