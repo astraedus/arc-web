@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ExportButton from "@/components/ExportButton";
 import UserIdToggle from "@/components/UserIdToggle";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,15 @@ export default async function ProfilePage() {
             </dd>
           </div>
         </dl>
+      </section>
+
+      <section className="rounded-2xl border border-card-border bg-card p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray">
+          Theme
+        </h2>
+        <div className="mt-4">
+          <ThemeSwitcher />
+        </div>
       </section>
 
       <section className="rounded-2xl border border-card-border bg-card p-6">

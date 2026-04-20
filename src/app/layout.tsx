@@ -29,6 +29,15 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Apply stored color theme BEFORE React hydrates to avoid a flash of
+            the default palette. Anything malformed/missing falls back to paper. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('arc-theme');if(t&&['space','garden','ocean','brutalist'].indexOf(t)>-1){document.documentElement.setAttribute('data-theme',t)}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <PostHogProvider>
           {children}

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+/* ─── Default theme: Paper (warm cream) ─────────────────────────────────── */
 @theme inline {
   --color-background: #FAFAF8;
   --color-foreground: #2B2822;
@@ -14,6 +15,65 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* ─── Theme: Space (deep night sky, warm star points) ───────────────────── */
+[data-theme="space"] {
+  --color-background: #0B0F1A;
+  --color-foreground: #ECE7DA;
+  --color-amber: #FFB861;
+  --color-amber-light: #FFD49C;
+  --color-amber-dark: #E89940;
+  --color-warm-gray: #8A8FA3;
+  --color-warm-gray-light: #5C627A;
+  --color-card: #131727;
+  --color-card-border: #1F2438;
+  --color-muted: #181C2C;
+}
+
+/* ─── Theme: Garden (sage, terracotta, sand) ────────────────────────────── */
+[data-theme="garden"] {
+  --color-background: #F4F1E8;
+  --color-foreground: #2A2E25;
+  --color-amber: #C76747;        /* terracotta accent */
+  --color-amber-light: #E2A088;
+  --color-amber-dark: #A04E32;
+  --color-warm-gray: #5E6A4F;    /* mossy */
+  --color-warm-gray-light: #93A07F;
+  --color-card: #FBF8EF;
+  --color-card-border: #E5DFCD;
+  --color-muted: #EFEBDD;
+}
+
+/* ─── Theme: Ocean (deep teal, abalone, coral) ──────────────────────────── */
+[data-theme="ocean"] {
+  --color-background: #0C2230;
+  --color-foreground: #E6F1F2;
+  --color-amber: #FF9F7A;        /* warm coral against cool bg */
+  --color-amber-light: #FFC1A5;
+  --color-amber-dark: #E07A55;
+  --color-warm-gray: #88AAB5;
+  --color-warm-gray-light: #4F6F7D;
+  --color-card: #143040;
+  --color-card-border: #1F4154;
+  --color-muted: #173848;
+}
+
+/* ─── Theme: Brutalist Archive (paper-white + ink-black, monospace) ─────── */
+[data-theme="brutalist"] {
+  --color-background: #FFFFFF;
+  --color-foreground: #000000;
+  --color-amber: #000000;        /* CTAs are pure ink */
+  --color-amber-light: #444444;
+  --color-amber-dark: #222222;
+  --color-warm-gray: #555555;
+  --color-warm-gray-light: #999999;
+  --color-card: #FFFFFF;
+  --color-card-border: #000000;
+  --color-muted: #F0F0F0;
+  --font-sans: var(--font-geist-mono);
+}
+
+/* ─── Base styles ───────────────────────────────────────────────────────── */
 
 * {
   box-sizing: border-box;
@@ -30,6 +90,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
+  /* Smooth color/background transitions when switching themes */
+  transition: background-color 320ms ease, color 320ms ease;
 }
 
 ::selection {
@@ -44,4 +106,26 @@ input, textarea, button, select {
 input:focus-visible, textarea:focus-visible, button:focus-visible {
   outline: 2px solid var(--color-amber);
   outline-offset: 2px;
+}
+
+/* Space theme: subtle starfield via radial gradients on body, very faint */
+[data-theme="space"] body {
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.65), transparent 50%),
+    radial-gradient(1px 1px at 27% 73%, rgba(255, 255, 255, 0.40), transparent 50%),
+    radial-gradient(1px 1px at 41% 31%, rgba(255, 255, 255, 0.55), transparent 50%),
+    radial-gradient(1px 1px at 58% 84%, rgba(255, 255, 255, 0.30), transparent 50%),
+    radial-gradient(1px 1px at 71% 11%, rgba(255, 255, 255, 0.50), transparent 50%),
+    radial-gradient(1px 1px at 83% 56%, rgba(255, 255, 255, 0.35), transparent 50%),
+    radial-gradient(1.5px 1.5px at 92% 27%, rgba(255, 184, 97, 0.45), transparent 50%),
+    radial-gradient(1px 1px at 6% 91%, rgba(255, 255, 255, 0.30), transparent 50%);
+  background-attachment: fixed;
+  background-size: 100% 100%;
+}
+
+/* Ocean theme: very subtle horizontal "current" gradient overlay */
+[data-theme="ocean"] body {
+  background-image:
+    linear-gradient(180deg, transparent 0%, rgba(31, 65, 84, 0.18) 100%);
+  background-attachment: fixed;
 }
