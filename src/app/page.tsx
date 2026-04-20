@@ -27,17 +27,15 @@ export default function LandingPage() {
           <div className="md:order-1">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-amber/10 px-3 py-1 text-xs font-medium text-amber-dark">
               <span className="h-1.5 w-1.5 rounded-full bg-amber" />
-              Your vault, on the web
+              The Mirror, on the web
             </div>
             <h1 className="text-4xl font-bold tracking-tight leading-tight sm:text-5xl">
-              Your Arc Journal,
-              <br />
-              on any browser.
+              An AI that reads your whole story and shows you who you&apos;re
+              becoming.
             </h1>
             <p className="mt-6 max-w-md text-warm-gray">
-              The same vault that lives in your phone, now accessible from any
-              desktop. Read every note, write new ones, export the lot whenever
-              you want.
+              Sign in to keep writing, revisit past entries, and carry your
+              whole vault with you from any browser.
             </p>
             <ul className="mt-8 space-y-3 text-sm text-warm-gray">
               <li className="flex items-start gap-3">
