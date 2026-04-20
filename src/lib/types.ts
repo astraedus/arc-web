@@ -1,5 +1,19 @@
 export type NoteType = "text" | "voice" | "sticky";
 
+export type TranscriptionSource =
+  | "whisper_groq"
+  | "native_ios"
+  | "native_android"
+  | "manual";
+
+export interface EntryMetadata {
+  raw_transcript?: string;
+  organized_by_ai?: boolean;
+  transcription_source?: TranscriptionSource;
+  captured_at?: string;
+  [key: string]: unknown;
+}
+
 export interface JournalEntry {
   id: string;
   user_id: string;
@@ -10,6 +24,7 @@ export interface JournalEntry {
   protected: boolean;
   location: string | null;
   weather: string | null;
+  metadata: EntryMetadata | null;
   indexed_at: string | null;
   created_at: string;
   updated_at: string;

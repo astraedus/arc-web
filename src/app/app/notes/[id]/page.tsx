@@ -5,6 +5,7 @@ import EditableNoteBody from "@/components/EditableNoteBody";
 import DeleteNoteButton from "@/components/DeleteNoteButton";
 import ClientDate from "@/components/ClientDate";
 import FocusMode from "@/components/FocusMode";
+import RawOrganizedToggle from "@/components/RawOrganizedToggle";
 import type { EntryTheme, Insight, JournalEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function NoteDetailPage({ params }: PageProps) {
   const { data: note, error: noteError } = await supabase
     .from("journal_entries")
     .select(
-      "id, user_id, content, note_type, mood_tag, theme_tags, protected, location, weather, indexed_at, created_at, updated_at"
+      "id, user_id, content, note_type, mood_tag, theme_tags, protected, location, weather, metadata, indexed_at, created_at, updated_at"
     )
     .eq("id", id)
     .maybeSingle<JournalEntry>();
@@ -67,7 +68,17 @@ export default async function NoteDetailPage({ params }: PageProps) {
         </div>
       </header>
 
-      <EditableNoteBody id={note.id} content={note.content} />
+      {note.metadata?.raw_transcript &&
+      note.metadata.raw_transcript !== note.content ? (
+        <RawOrganizedToggle
+          organized={note.content}
+          raw={note.metadata.raw_transcript}
+          organizedByAi={note.metadata.organized_by_ai}
+          transcriptionSource={note.metadata.transcription_source ?? null}
+        />
+      ) : (
+        <EditableNoteBody id={note.id} content={note.content} />
+      )}
 
       {(note.mood_tag || (note.theme_tags && note.theme_tags.length > 0)) ? (
         <div className="flex flex-wrap items-center gap-2">
