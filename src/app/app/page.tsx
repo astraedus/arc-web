@@ -83,20 +83,21 @@ export default async function StreamPage() {
         <OnThisDay />
       </section>
 
-      {/* The river -- own breathing room */}
-      {list.length > 1 && (
-        <section className="mb-24 space-y-4">
-          <div className="text-center">
-            <p className="text-[11px] uppercase tracking-[0.25em] text-warm-gray-light">
-              The river
-            </p>
-            <p className="mt-2 text-xs italic text-warm-gray">
-              earlier on the left, now on the right
-            </p>
-          </div>
-          <RiverOfTime entries={riverEntries} reflections={reflections} />
-        </section>
-      )}
+      {/* The river -- always on. Renders at day 1 as a single mood slice,
+          at day 3+ as real slices with a ghost extension, and at day 7+ as
+          the full ribbon. Matches the always-on treatment of the Mirror
+          spine and the Graph constellation — the surface never hides. */}
+      <section className="mb-24 space-y-4">
+        <div className="text-center">
+          <p className="text-[11px] uppercase tracking-[0.25em] text-warm-gray-light">
+            The river
+          </p>
+          <p className="mt-2 text-xs italic text-warm-gray">
+            earlier on the left, now on the right
+          </p>
+        </div>
+        <RiverOfTime entries={riverEntries} reflections={reflections} />
+      </section>
 
       {/* Stream -- the actual entries */}
       <section className="space-y-6">

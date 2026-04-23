@@ -134,12 +134,110 @@ export default function RiverOfTime({
     return list;
   }, [bands]);
 
-  if (entries.length === 0) {
+  // ── Sparse-state gating ────────────────────────────────────────────────
+  //
+  // The river is ALWAYS on — matching the Mirror spine and Graph constellation
+  // treatment. We never hide the surface; we let it "fill in" as the user
+  // writes. Three visual states, keyed on distinct-day count (buckets.length):
+  //
+  //   • dayCount === 0 → empty: soft placeholder message + a single neutral
+  //     mood-slice centered in the ribbon. Teaches what's coming.
+  //   • dayCount 1–2 → sparse: real slice(s) centered, placeholder copy
+  //     underneath. The ribbon is clearly *starting*.
+  //   • dayCount 3–6 → partial: real slices on the left + dashed ghost slices
+  //     on the right hinting at the ribbon's future extent.
+  //   • dayCount ≥ 7 → full ribbon, unchanged.
+  //
+  // The key metric is *distinct days*, not raw entries — two entries on one
+  // day is still one "slice" on the ribbon.
+  const dayCount = buckets.length;
+  const isEmpty = dayCount === 0;
+  const isSparse = dayCount >= 1 && dayCount <= 2;
+  const isPartial = dayCount >= 3 && dayCount <= 6;
+
+  // How many ghost slices to append on the right in partial mode. We aim
+  // toward the 7-day threshold — so if the user has 4 real days, we render
+  // 3 ghosts. Capped to keep the visual gentle.
+  const ghostSliceCount = isPartial ? Math.max(3, 7 - dayCount) : 0;
+
+  // Legend is shared across all states so the visual language stays stable.
+  const legend = (
+    <div className="flex flex-wrap items-center gap-3 text-xs text-warm-gray-light">
+      <span className="flex items-center gap-1.5">
+        <span
+          className="inline-block h-1.5 w-3 rounded"
+          style={{ background: MOOD_PALETTE.alive }}
+        />
+        alive
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="inline-block h-1.5 w-3 rounded"
+          style={{ background: MOOD_PALETTE.hopeful }}
+        />
+        hopeful
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="inline-block h-1.5 w-3 rounded"
+          style={{ background: MOOD_PALETTE.steady }}
+        />
+        steady
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="inline-block h-1.5 w-3 rounded"
+          style={{ background: MOOD_PALETTE.uncertain }}
+        />
+        uncertain
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span
+          className="inline-block h-1.5 w-3 rounded"
+          style={{ background: MOOD_PALETTE.struggling }}
+        />
+        struggling
+      </span>
+      <span className="ml-auto flex items-center gap-1.5">
+        <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-dark" />
+        reflection
+      </span>
+    </div>
+  );
+
+  // ── Empty state: zero entries ─────────────────────────────────────────
+  // A single neutral-mood slice, centered, with the growth-promise copy.
+  // Same ribbon container + legend as every other state — the surface is
+  // the same shape at every moment of the user's life, it just fills in.
+  if (isEmpty) {
     return (
-      <div className="rounded-2xl border border-dashed border-card-border bg-card p-12 text-center">
-        <p className="text-sm text-warm-gray">
-          The river hasn&apos;t started flowing yet. Write your first entry.
-        </p>
+      <div className="space-y-3">
+        <div className="relative rounded-2xl border border-card-border bg-card p-4">
+          <div
+            className="flex flex-row items-center justify-center gap-1 py-4"
+            style={{ minHeight: 96 }}
+          >
+            <div
+              aria-hidden="true"
+              className="block w-3 rounded-sm opacity-40"
+              style={{
+                height: "16px",
+                background: moodColor(null),
+                boxShadow: "inset 0 0 0 0.5px rgba(43, 40, 34, 0.18)",
+              }}
+            />
+          </div>
+          <p
+            className="mt-2 text-center text-xs italic text-warm-gray-light"
+            style={{
+              fontFamily:
+                "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
+            }}
+          >
+            Each day you write, your river grows.
+          </p>
+        </div>
+        {legend}
       </div>
     );
   }
@@ -160,7 +258,11 @@ export default function RiverOfTime({
 
       {/* The river */}
       <div className="relative rounded-2xl border border-card-border bg-card p-4">
-        <div className="flex flex-row items-center gap-px overflow-x-auto py-4">
+        <div
+          className={`flex flex-row items-center gap-px overflow-x-auto py-4 ${
+            isSparse ? "justify-center" : ""
+          }`}
+        >
           {bands.map((b, i) => {
             if (b.kind === "gap") {
               const label = describeGap(b.days);
@@ -243,50 +345,54 @@ export default function RiverOfTime({
               </div>
             );
           })}
+          {/* Ghost slices — trailing dashed-outline placeholders in partial
+              mode (3–6 distinct days). They show the ribbon's future
+              extent without faking data. Non-interactive, aria-hidden. */}
+          {isPartial &&
+            Array.from({ length: ghostSliceCount }).map((_, i) => (
+              <div
+                key={`ghost-${i}`}
+                aria-hidden="true"
+                className="shrink-0 px-0.5"
+                style={{ minHeight: 96, display: "flex", alignItems: "flex-end" }}
+              >
+                <div
+                  className="w-3 rounded-sm border border-dashed border-warm-gray-light/50 opacity-60"
+                  style={{
+                    height: "16px",
+                    background: "transparent",
+                  }}
+                />
+              </div>
+            ))}
         </div>
+        {/* Sparse-state copy — sits inside the ribbon card so it reads as
+            part of the ribbon itself, not a separate announcement. */}
+        {isSparse && (
+          <p
+            className="mt-1 text-center text-xs italic text-warm-gray-light"
+            style={{
+              fontFamily:
+                "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
+            }}
+          >
+            Each day you write, your river grows.
+          </p>
+        )}
+        {isPartial && (
+          <p
+            className="mt-1 text-right text-xs italic text-warm-gray-light"
+            style={{
+              fontFamily:
+                "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
+            }}
+          >
+            your ribbon extends as you write
+          </p>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-warm-gray-light">
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_PALETTE.alive }}
-          />
-          alive
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_PALETTE.hopeful }}
-          />
-          hopeful
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_PALETTE.steady }}
-          />
-          steady
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_PALETTE.uncertain }}
-          />
-          uncertain
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_PALETTE.struggling }}
-          />
-          struggling
-        </span>
-        <span className="ml-auto flex items-center gap-1.5">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-dark" />
-          reflection
-        </span>
-      </div>
+      {legend}
     </div>
   );
 }
