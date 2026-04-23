@@ -7,10 +7,21 @@ const PUBLIC_PATHS = new Set(["/", "/signup", "/auth/callback"]);
 // Routes that require a session.
 const PROTECTED_PREFIX = "/app";
 
+// Routes that are fully exempt from auth processing. Visible to anyone,
+// authed or not, with no session refresh side effects. Used for the public
+// demo surface (/demo) so signed-in users don't get bounced to /app when
+// they open a pitch link.
+const EXEMPT_PREFIXES = ["/demo"];
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
+
+  const { pathname: earlyPath } = request.nextUrl;
+  if (EXEMPT_PREFIXES.some((p) => earlyPath === p || earlyPath.startsWith(`${p}/`))) {
+    return supabaseResponse;
+  }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
