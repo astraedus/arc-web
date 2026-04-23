@@ -847,12 +847,7 @@ function InsightNode({
           >
             <div className="flex items-baseline justify-between gap-2 text-[9px] uppercase tracking-[0.14em] text-warm-gray-light">
               <span style={{ color }}>{typeLabel}</span>
-              <span>
-                {new Date(i.created_at).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
+              <ClientDate iso={i.created_at} format="short" />
             </div>
             <h4 className="mt-1 text-[13px] font-semibold leading-snug text-foreground">
               {i.title}
@@ -953,15 +948,7 @@ function EntryNode({
             type="button"
             onClick={onToggle}
             aria-expanded={expanded}
-            aria-label={`Entry on ${new Date(
-              entry.created_at
-            ).toLocaleDateString(undefined, {
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}${entry.mood_tag ? `, mood ${entry.mood_tag}` : ""}. ${
-              expanded ? "Collapse" : "Expand"
-            } full entry.`}
+            aria-label={`Entry on ${entry.created_at.slice(0, 10)}${entry.mood_tag ? `, mood ${entry.mood_tag}` : ""}. ${expanded ? "Collapse" : "Expand"} full entry.`}
             className="block w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
           >
             <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.14em] text-warm-gray-light">

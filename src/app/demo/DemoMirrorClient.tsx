@@ -6,9 +6,10 @@
  * Supabase. The goal: show the UX, not expose a free call-to-LLM endpoint.
  */
 import { useMemo, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import TemporalSpine from "@/components/TemporalSpine";
 import LayerToggle from "@/components/LayerToggle";
-import { DEFAULT_LAYER, type Layer } from "@/lib/spine-layer";
+import { parseLayer, type Layer } from "@/lib/spine-layer";
 import type { Reflection, Insight, JournalEntry } from "@/lib/types";
 
 interface DemoMirrorClientProps {
@@ -27,7 +28,26 @@ export default function DemoMirrorClient({
   const entries = initialEntries;
   const [question, setQuestion] = useState("");
   const [nudge, setNudge] = useState<string | null>(null);
-  const [layer, setLayer] = useState<Layer>(DEFAULT_LAYER);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [layer, setLayer] = useState<Layer>(() =>
+    parseLayer(searchParams.get("layer"))
+  );
+
+  function handleLayerChange(next: Layer) {
+    setLayer(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "all") {
+      params.delete("layer");
+    } else {
+      params.set("layer", next);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
 
   const counts = useMemo(
     () => ({
@@ -118,7 +138,7 @@ export default function DemoMirrorClient({
               {entries.length > 0 && ` · ${entries.length} entries`}
             </p>
           </div>
-          <LayerToggle value={layer} onChange={setLayer} counts={counts} />
+          <LayerToggle value={layer} onChange={handleLayerChange} counts={counts} />
         </div>
         <TemporalSpine
           reflections={reflections}
