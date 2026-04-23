@@ -7,11 +7,26 @@ import ClientDate from "@/components/ClientDate";
 import FocusMode from "@/components/FocusMode";
 import RawOrganizedToggle from "@/components/RawOrganizedToggle";
 import type { EntryTheme, Insight, JournalEntry } from "@/lib/types";
+import {
+  buildWikilinkTargetMap,
+  deriveEntryTitle,
+  findBacklinksToEntry,
+  type WikilinkTitleEntry,
+} from "@/lib/wikilinks";
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+function noteSnippet(content: string | null | undefined, max = 150) {
+  const body = content?.includes("\n")
+    ? content.slice(content.indexOf("\n") + 1)
+    : content;
+  const flat = (body || "").replace(/\s+/g, " ").trim();
+  if (!flat) return "(empty note)";
+  return flat.length > max ? `${flat.slice(0, max).trim()}...` : flat;
 }
 
 export default async function NoteDetailPage({ params }: PageProps) {
@@ -30,21 +45,30 @@ export default async function NoteDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // Fetch linked themes (mind map nodes the AI attached to this note).
-  const { data: themes } = await supabase
-    .from("entry_themes")
-    .select("id, entry_id, node_id, insight, life_map_nodes(id, label, level)")
-    .eq("entry_id", note.id);
+  const [{ data: themes }, { data: insights }, { data: wikilinkNotes }] =
+    await Promise.all([
+      supabase
+        .from("entry_themes")
+        .select("id, entry_id, node_id, insight, life_map_nodes(id, label, level)")
+        .eq("entry_id", note.id),
+      supabase
+        .from("insights")
+        .select(
+          "id, user_id, insight_type, title, description, related_note_ids, created_at"
+        )
+        .contains("related_note_ids", [note.id]),
+      supabase
+        .from("journal_entries")
+        .select("id, content, created_at, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(1000),
+    ]);
 
   const themeList = (themes ?? []) as unknown as EntryTheme[];
-
-  // Fetch insights that reference this note id in their related_note_ids.
-  const { data: insights } = await supabase
-    .from("insights")
-    .select("id, user_id, insight_type, title, description, related_note_ids, created_at")
-    .contains("related_note_ids", [note.id]);
-
   const insightList = (insights ?? []) as Insight[];
+  const wikilinkEntries = (wikilinkNotes ?? []) as WikilinkTitleEntry[];
+  const wikilinkTargets = buildWikilinkTargetMap(wikilinkEntries);
+  const backlinks = findBacklinksToEntry(wikilinkEntries, note);
 
   return (
     <article className="mx-auto max-w-3xl space-y-8">
@@ -55,7 +79,11 @@ export default async function NoteDetailPage({ params }: PageProps) {
         >
           Back to stream
         </Link>
-        <FocusMode content={note.content} date={note.created_at} />
+        <FocusMode
+          content={note.content}
+          date={note.created_at}
+          wikilinkTargets={wikilinkTargets}
+        />
       </div>
 
       <header className="space-y-2">
@@ -75,9 +103,14 @@ export default async function NoteDetailPage({ params }: PageProps) {
           raw={note.metadata.raw_transcript}
           organizedByAi={note.metadata.organized_by_ai}
           transcriptionSource={note.metadata.transcription_source ?? null}
+          wikilinkTargets={wikilinkTargets}
         />
       ) : (
-        <EditableNoteBody id={note.id} content={note.content} />
+        <EditableNoteBody
+          id={note.id}
+          content={note.content}
+          wikilinkTargets={wikilinkTargets}
+        />
       )}
 
       {(note.mood_tag || (note.theme_tags && note.theme_tags.length > 0)) ? (
@@ -118,6 +151,48 @@ export default async function NoteDetailPage({ params }: PageProps) {
           ) : null}
         </div>
       ) : null}
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray">
+            Backlinks
+          </h2>
+          <p className="mt-1 text-xs text-warm-gray-light">
+            Other entries that link here with [[{deriveEntryTitle(note) ?? "this note"}]].
+          </p>
+        </div>
+        {backlinks.length > 0 ? (
+          <div className="space-y-3">
+            {backlinks.map((entry) => (
+              <Link
+                key={entry.id}
+                href={`/app/notes/${entry.id}`}
+                className="block rounded-xl border border-card-border bg-card p-4 transition-colors hover:border-amber/30 hover:bg-amber/[0.02]"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {deriveEntryTitle(entry) ?? "Untitled note"}
+                  </h3>
+                  {entry.created_at ? (
+                    <ClientDate
+                      iso={entry.created_at}
+                      format="short"
+                      className="shrink-0 text-xs text-warm-gray-light"
+                    />
+                  ) : null}
+                </div>
+                <p className="mt-1 text-sm leading-relaxed text-warm-gray">
+                  {noteSnippet(entry.content)}
+                </p>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-card-border bg-card p-4 text-sm text-warm-gray">
+            No other entries link here yet.
+          </div>
+        )}
+      </section>
 
       {themeList.length > 0 ? (
         <section className="space-y-3">

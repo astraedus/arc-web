@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import WikilinkText from "@/components/WikilinkText";
+import type { WikilinkTargetMap } from "@/lib/wikilinks";
 
 interface RawOrganizedToggleProps {
   organized: string;
   raw: string;
   organizedByAi?: boolean;
   transcriptionSource?: string | null;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
 type Mode = "organized" | "raw" | "both";
@@ -23,6 +26,7 @@ export default function RawOrganizedToggle({
   raw,
   organizedByAi,
   transcriptionSource,
+  wikilinkTargets,
 }: RawOrganizedToggleProps) {
   const [mode, setMode] = useState<Mode>("organized");
 
@@ -83,7 +87,7 @@ export default function RawOrganizedToggle({
       {/* Body */}
       {mode === "organized" && (
         <div className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
-          {organized}
+          <WikilinkText text={organized} targets={wikilinkTargets} />
         </div>
       )}
 
@@ -93,7 +97,7 @@ export default function RawOrganizedToggle({
             what you actually said
           </p>
           <div className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
-            {raw}
+            <WikilinkText text={raw} targets={wikilinkTargets} />
           </div>
         </div>
       )}
@@ -105,7 +109,7 @@ export default function RawOrganizedToggle({
               ✦ organized
             </p>
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-              {organized}
+              <WikilinkText text={organized} targets={wikilinkTargets} />
             </div>
           </div>
           <div className="md:pl-6">
@@ -113,7 +117,7 @@ export default function RawOrganizedToggle({
               what you actually said
             </p>
             <div className="whitespace-pre-wrap text-sm leading-relaxed text-warm-gray">
-              {raw}
+              <WikilinkText text={raw} targets={wikilinkTargets} />
             </div>
           </div>
         </div>

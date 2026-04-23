@@ -5,11 +5,14 @@ import { useSearchParams, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import TemporalSpine from "@/components/TemporalSpine";
+import WikilinkText from "@/components/WikilinkText";
 import type { Reflection, Insight } from "@/lib/types";
+import type { WikilinkTargetMap } from "@/lib/wikilinks";
 
 interface MirrorClientProps {
   initialReflections: Reflection[];
   initialInsights?: Insight[];
+  wikilinkTargets?: WikilinkTargetMap;
   /**
    * Total journal_entries count for the signed-in user. Threaded down
    * to TemporalSpine so it can decide which ghost placeholder cards to
@@ -42,6 +45,7 @@ function friendlyMirrorError(raw: string): string {
 export default function MirrorClient({
   initialReflections,
   initialInsights = [],
+  wikilinkTargets,
   entryCount,
 }: MirrorClientProps) {
   const router = useRouter();
@@ -205,7 +209,7 @@ export default function MirrorClient({
         {answer && !asking && (
           <div className="rounded-2xl border border-amber/20 bg-card p-6">
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-              {answer}
+              <WikilinkText text={answer} targets={wikilinkTargets} />
             </p>
           </div>
         )}
@@ -254,6 +258,7 @@ export default function MirrorClient({
         <TemporalSpine
           reflections={reflections}
           insights={initialInsights}
+          wikilinkTargets={wikilinkTargets}
           entryCount={entryCount}
           showGhosts
         />

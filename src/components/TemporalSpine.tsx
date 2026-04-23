@@ -32,6 +32,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import ClientDate from "@/components/ClientDate";
+import WikilinkText from "@/components/WikilinkText";
 import { useInViewFade } from "@/hooks/useInViewFade";
 import {
   moodColor,
@@ -39,6 +40,7 @@ import {
   reflectionSpineMood,
 } from "@/lib/mood-palette";
 import type { Reflection, Insight } from "@/lib/types";
+import type { WikilinkTargetMap } from "@/lib/wikilinks";
 import {
   GhostStartingDot,
   GhostReflectionCard,
@@ -123,6 +125,7 @@ interface TemporalSpineProps {
    * to false from /demo where full sample data is already present.
    */
   showGhosts?: boolean;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
 export default function TemporalSpine({
@@ -131,6 +134,7 @@ export default function TemporalSpine({
   inert = false,
   entryCount,
   showGhosts = true,
+  wikilinkTargets,
 }: TemporalSpineProps) {
   // Active reflection id drives the hover-reveal. We track it in state
   // rather than pure :hover because a related-insight dot also needs to
@@ -369,6 +373,7 @@ export default function TemporalSpine({
             onReflectionLeave={() => setActiveReflectionId(null)}
             onInsightEnter={setActiveInsightId}
             onInsightLeave={() => setActiveInsightId(null)}
+            wikilinkTargets={wikilinkTargets}
           />
         ))}
       </ol>
@@ -394,6 +399,7 @@ interface SpineItemProps {
   onReflectionLeave: () => void;
   onInsightEnter: (id: string) => void;
   onInsightLeave: () => void;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
 function SpineItem({
@@ -405,6 +411,7 @@ function SpineItem({
   onReflectionLeave,
   onInsightEnter,
   onInsightLeave,
+  wikilinkTargets,
 }: SpineItemProps) {
   // Stagger the reveal per item. Past ~12 items the stagger caps — no
   // point making late items wait forever.
@@ -438,6 +445,7 @@ function SpineItem({
           inert={inert}
           onEnter={onReflectionEnter}
           onLeave={onReflectionLeave}
+          wikilinkTargets={wikilinkTargets}
         />
       </li>
     );
@@ -452,6 +460,7 @@ function SpineItem({
         insight={event.i}
         onEnter={onInsightEnter}
         onLeave={onInsightLeave}
+        wikilinkTargets={wikilinkTargets}
       />
     </li>
   );
@@ -465,6 +474,7 @@ interface ReflectionNodeProps {
   inert: boolean;
   onEnter: (id: string) => void;
   onLeave: () => void;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
 function ReflectionNode({
@@ -473,6 +483,7 @@ function ReflectionNode({
   inert,
   onEnter,
   onLeave,
+  wikilinkTargets,
 }: ReflectionNodeProps) {
   const mood = reflectionSpineMood(r.reflection_type);
   const color = moodColor(mood);
@@ -501,7 +512,7 @@ function ReflectionNode({
         {r.title}
       </h3>
       <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-warm-gray">
-        {previewBody(r.body)}
+        <WikilinkText text={previewBody(r.body)} targets={wikilinkTargets} />
       </p>
     </>
   );
@@ -575,9 +586,15 @@ interface InsightNodeProps {
   insight: Insight;
   onEnter: (id: string) => void;
   onLeave: () => void;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
-function InsightNode({ insight: i, onEnter, onLeave }: InsightNodeProps) {
+function InsightNode({
+  insight: i,
+  onEnter,
+  onLeave,
+  wikilinkTargets,
+}: InsightNodeProps) {
   const color = insightTypeColor(i.insight_type);
   const typeLabel = TYPE_LABEL[i.insight_type] ?? i.insight_type;
 
@@ -630,7 +647,10 @@ function InsightNode({ insight: i, onEnter, onLeave }: InsightNodeProps) {
           </h4>
           {i.description && (
             <p className="mt-1.5 text-[12px] leading-relaxed text-warm-gray line-clamp-3">
-              {i.description}
+              <WikilinkText
+                text={i.description}
+                targets={wikilinkTargets}
+              />
             </p>
           )}
         </article>

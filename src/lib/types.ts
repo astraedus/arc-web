@@ -17,6 +17,7 @@ export interface EntryMetadata {
 export interface JournalEntry {
   id: string;
   user_id: string;
+  title?: string | null;
   content: string;
   note_type: NoteType;
   mood_tag: string | null;

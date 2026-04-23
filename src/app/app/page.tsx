@@ -4,12 +4,13 @@ import SearchableStream from "@/components/SearchBar";
 import OnThisDay from "@/components/OnThisDay";
 import RiverOfTime from "@/components/RiverOfTime";
 import type { JournalEntry, EchoConnection } from "@/lib/types";
+import { buildWikilinkTargetMap } from "@/lib/wikilinks";
 
 export const dynamic = "force-dynamic";
 
 export default async function StreamPage() {
   const supabase = await createClient();
-  const [notesRes, reflectionsRes] = await Promise.all([
+  const [notesRes, reflectionsRes, wikilinkNotesRes] = await Promise.all([
     supabase
       .from("journal_entries")
       .select(
@@ -22,11 +23,17 @@ export default async function StreamPage() {
       .select("id, title, reflection_type, created_at")
       .order("created_at", { ascending: false })
       .limit(50),
+    supabase
+      .from("journal_entries")
+      .select("id, content, created_at, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(1000),
   ]);
   const { data: notes, error } = notesRes;
   const reflections = reflectionsRes.data ?? [];
 
   const list = (notes ?? []) as JournalEntry[];
+  const wikilinkTargets = buildWikilinkTargetMap(wikilinkNotesRes.data ?? []);
 
   // Fetch echo connections for all displayed notes.
   const noteIds = list.map((n) => n.id);
@@ -139,7 +146,11 @@ export default async function StreamPage() {
             </Link>
           </div>
         ) : (
-          <SearchableStream initialNotes={list} echoMap={echoMap} />
+          <SearchableStream
+            initialNotes={list}
+            echoMap={echoMap}
+            wikilinkTargets={wikilinkTargets}
+          />
         )}
       </section>
 

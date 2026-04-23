@@ -3,13 +3,20 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import WikilinkText from "@/components/WikilinkText";
+import type { WikilinkTargetMap } from "@/lib/wikilinks";
 
 interface EditableNoteBodyProps {
   id: string;
   content: string;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
-export default function EditableNoteBody({ id, content }: EditableNoteBodyProps) {
+export default function EditableNoteBody({
+  id,
+  content,
+  wikilinkTargets,
+}: EditableNoteBodyProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(content);
@@ -93,13 +100,15 @@ export default function EditableNoteBody({ id, content }: EditableNoteBodyProps)
     );
   }
 
+  const visibleContent = content.includes("\n")
+    ? content.slice(content.indexOf("\n") + 1)
+    : content;
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-card-border bg-card p-8">
         <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
-          {content.includes("\n")
-            ? content.slice(content.indexOf("\n") + 1)
-            : content}
+          <WikilinkText text={visibleContent} targets={wikilinkTargets} />
         </p>
       </div>
       <div className="flex items-center justify-end">

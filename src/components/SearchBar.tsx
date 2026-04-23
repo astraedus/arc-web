@@ -4,13 +4,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import NoteCard from "@/components/NoteCard";
 import type { JournalEntry, EchoConnection } from "@/lib/types";
+import type { WikilinkTargetMap } from "@/lib/wikilinks";
 
 interface SearchableStreamProps {
   initialNotes: JournalEntry[];
   echoMap?: Record<string, EchoConnection[]>;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
-export default function SearchableStream({ initialNotes, echoMap }: SearchableStreamProps) {
+export default function SearchableStream({
+  initialNotes,
+  echoMap,
+  wikilinkTargets,
+}: SearchableStreamProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<JournalEntry[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -99,6 +105,7 @@ export default function SearchableStream({ initialNotes, echoMap }: SearchableSt
               key={note.id}
               note={note}
               echoes={echoMap?.[note.id]}
+              wikilinkTargets={wikilinkTargets}
             />
           ))}
         </div>

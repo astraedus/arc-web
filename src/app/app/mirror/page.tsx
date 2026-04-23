@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import MirrorClient from "@/components/MirrorClient";
 import type { Reflection, Insight } from "@/lib/types";
+import { buildWikilinkTargetMap } from "@/lib/wikilinks";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function MirrorPage() {
     { data: reflections },
     { data: insightRows },
     { count: entryCount },
+    { data: wikilinkNotes },
   ] = await Promise.all([
     supabase
       .from("reflections")
@@ -32,11 +34,17 @@ export default async function MirrorPage() {
       .order("created_at", { ascending: false })
       .limit(50),
     supabase.from("journal_entries").select("id", { count: "exact", head: true }),
+    supabase
+      .from("journal_entries")
+      .select("id, content, created_at, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(1000),
   ]);
 
   const reflectionList = (reflections ?? []) as Reflection[];
   const insightList = (insightRows ?? []) as Insight[];
   const totalEntries = entryCount ?? 0;
+  const wikilinkTargets = buildWikilinkTargetMap(wikilinkNotes ?? []);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -70,6 +78,7 @@ export default async function MirrorPage() {
         <MirrorClient
           initialReflections={reflectionList}
           initialInsights={insightList}
+          wikilinkTargets={wikilinkTargets}
           entryCount={totalEntries}
         />
       </section>

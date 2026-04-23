@@ -1,5 +1,8 @@
 "use client";
 
+import WikilinkText from "@/components/WikilinkText";
+import type { WikilinkTargetMap } from "@/lib/wikilinks";
+
 /**
  * Renders reflection body text with styled quoted passages.
  * Patterns like `you wrote: "..."` get an amber left border + italic treatment.
@@ -7,6 +10,7 @@
 
 interface ReflectionBodyProps {
   body: string;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
 /**
@@ -38,7 +42,10 @@ function parseBody(text: string): Array<{ type: "text" | "quote"; content: strin
   return segments.length > 0 ? segments : [{ type: "text", content: text }];
 }
 
-export default function ReflectionBody({ body }: ReflectionBodyProps) {
+export default function ReflectionBody({
+  body,
+  wikilinkTargets,
+}: ReflectionBodyProps) {
   const segments = parseBody(body);
 
   return (
@@ -50,7 +57,7 @@ export default function ReflectionBody({ body }: ReflectionBodyProps) {
             className="border-l-3 border-amber pl-4 italic text-warm-gray"
           >
             <p className="whitespace-pre-wrap text-base leading-relaxed">
-              {seg.content}
+              <WikilinkText text={seg.content} targets={wikilinkTargets} />
             </p>
           </blockquote>
         ) : (
@@ -58,7 +65,7 @@ export default function ReflectionBody({ body }: ReflectionBodyProps) {
             key={i}
             className="whitespace-pre-wrap text-base leading-relaxed text-foreground"
           >
-            {seg.content}
+            <WikilinkText text={seg.content} targets={wikilinkTargets} />
           </p>
         )
       )}

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import WikilinkText from "@/components/WikilinkText";
+import type { WikilinkTargetMap } from "@/lib/wikilinks";
 
 interface FocusModeProps {
   content: string;
   date: string;
+  wikilinkTargets?: WikilinkTargetMap;
 }
 
 function fullDate(iso: string) {
@@ -16,7 +19,11 @@ function fullDate(iso: string) {
   });
 }
 
-export default function FocusMode({ content, date }: FocusModeProps) {
+export default function FocusMode({
+  content,
+  date,
+  wikilinkTargets,
+}: FocusModeProps) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -110,7 +117,7 @@ export default function FocusMode({ content, date }: FocusModeProps) {
                 color: "#2B2822",
               }}
             >
-              {content}
+              <WikilinkText text={content} targets={wikilinkTargets} />
             </div>
 
             <div className="mt-16 text-center text-xs italic text-warm-gray-light">

@@ -6,6 +6,7 @@ import ClientDate from "@/components/ClientDate";
 import ShareReflectionButton from "@/components/ShareReflectionButton";
 import { isReflectionShareable } from "@/lib/reflection-visibility";
 import type { Reflection } from "@/lib/types";
+import { buildWikilinkTargetMap } from "@/lib/wikilinks";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,13 @@ export default async function ReflectionDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const { data: wikilinkNotes } = await supabase
+    .from("journal_entries")
+    .select("id, content, created_at, updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(1000);
+
+  const wikilinkTargets = buildWikilinkTargetMap(wikilinkNotes ?? []);
   const shareable = isReflectionShareable(reflection);
 
   return (
@@ -64,7 +72,7 @@ export default async function ReflectionDetailPage({ params }: PageProps) {
       </header>
 
       <div className="rounded-2xl border border-card-border bg-card p-8">
-        <ReflectionBody body={reflection.body} />
+        <ReflectionBody body={reflection.body} wikilinkTargets={wikilinkTargets} />
       </div>
 
       {reflection.period_start && reflection.period_end && (
