@@ -9,7 +9,7 @@
  * (error #418) every page load. Bump DEMO_ANCHOR periodically to keep dates
  * feeling recent.
  */
-import type { Reflection, Insight } from "@/lib/types";
+import type { Reflection, Insight, JournalEntry } from "@/lib/types";
 
 const DEMO_USER_ID = "demo-alex-0000-0000-0000-000000000000";
 
@@ -212,6 +212,273 @@ export const DEMO_INSIGHTS: Insight[] = [
       "Early entries end with 'why' questions (why do I feel like this, why can't I decide). Recent ones end with 'what' questions (what do I want tomorrow to look like, what did Sam mean by that). 'Why' looks backward; 'what' looks forward.",
     related_note_ids: null,
     created_at: daysAgo(18),
+  },
+];
+
+/**
+ * Sample journal entries for the /demo Mirror.
+ *
+ * These are the raw material the reflections + insights above are derived
+ * from. IDs line up with the `related_note_ids` already referenced by the
+ * demo insights (demo-entry-002, demo-entry-003, demo-entry-005,
+ * demo-entry-007, demo-entry-009, demo-entry-011, demo-entry-013), so that
+ * drilling into an insight surfaces the actual entries that fed it.
+ *
+ * Created_at values cluster around the existing reflection dates so that
+ * the temporal-proximity fallback (±3 day window) surfaces real source
+ * entries when a user expands a reflection. Mood + theme tags mirror the
+ * patterns the reflections describe.
+ *
+ * Content is short, plainly written, matches the Alex persona — the goal
+ * is "demo entries that FEEL like honest diary writing," not essays.
+ */
+export const DEMO_ENTRIES: JournalEntry[] = [
+  // ── Around the 2-days-ago reflection "Am I happier than I was a year ago?"
+  {
+    id: "demo-entry-001",
+    user_id: DEMO_USER_ID,
+    content:
+      "Woke up before the alarm again. Three days in a row now.\n\nThe light in the kitchen was good. I didn't open my phone until after coffee, and I think that's why.\n\nSam texted about Saturday. Said yes without thinking about it first.",
+    note_type: "text",
+    mood_tag: "hopeful",
+    theme_tags: ["mornings", "sam"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(2),
+    created_at: daysAgo(2),
+    updated_at: daysAgo(2),
+  },
+  // ── Around the 4-days-ago reflection "What's different about me now..."
+  {
+    id: "demo-entry-002",
+    user_id: DEMO_USER_ID,
+    content:
+      "Called mum. She was in the garden. She sounded okay — not great, not bad, just there.\n\nI didn't try to fix anything this time. We just talked about the roses.\n\nHung up and didn't cry. Noticed I didn't cry.",
+    note_type: "text",
+    mood_tag: "steady",
+    theme_tags: ["mum", "family"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(4),
+    created_at: daysAgo(4),
+    updated_at: daysAgo(4),
+  },
+  {
+    id: "demo-entry-003",
+    user_id: DEMO_USER_ID,
+    content:
+      "I wonder if the readiness was always going to arrive after the beginning, not before.\n\nI've been waiting to feel ready for something for weeks now and today I just started. And it was fine. The readiness was on the other side.",
+    note_type: "text",
+    mood_tag: "alive",
+    theme_tags: ["ready", "beginnings"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(5),
+    created_at: daysAgo(5),
+    updated_at: daysAgo(5),
+  },
+  // ── Around the 7-days-ago reflection "A quieter week, and something settling"
+  {
+    id: "demo-entry-004",
+    user_id: DEMO_USER_ID,
+    content:
+      "Ran four km in the morning. Slept seven hours. She sounded okay enough on the phone.\n\nEnough, enough, enough.",
+    note_type: "text",
+    mood_tag: "steady",
+    theme_tags: ["running", "mum"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(7),
+    created_at: daysAgo(7),
+    updated_at: daysAgo(7),
+  },
+  {
+    id: "demo-entry-005",
+    user_id: DEMO_USER_ID,
+    content:
+      "Went running because the week felt heavy and I didn't know where to put it.\n\nWork was loud today. Three meetings I didn't need to be in. I kept thinking about mum and not about the deck.\n\nThe running helped. Or at least it moved the heaviness from my chest to my legs.",
+    note_type: "text",
+    mood_tag: "struggling",
+    theme_tags: ["running", "work", "mum"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(8),
+    created_at: daysAgo(8),
+    updated_at: daysAgo(8),
+  },
+  // ── Around the 9-days-ago reflection "Why do I keep writing about Sunday nights?"
+  {
+    id: "demo-entry-006",
+    user_id: DEMO_USER_ID,
+    content:
+      "Sunday night. Dread with no shape. The week ahead feels like a hallway with doors I haven't opened yet.\n\nI know this will pass by Tuesday. It always does. And yet here I am at 10pm writing about it.",
+    note_type: "text",
+    mood_tag: "uncertain",
+    theme_tags: ["sunday", "dread"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(10),
+    created_at: daysAgo(10),
+    updated_at: daysAgo(10),
+  },
+  {
+    id: "demo-entry-007",
+    user_id: DEMO_USER_ID,
+    content:
+      "Mum laughed today. The proper laugh, not the polite one. I'd forgotten it.\n\nIt was about a magpie that stole the nurse's pen. She told me the whole story and I just listened.\n\nThat's a gift — being the person she tells the magpie story to.",
+    note_type: "text",
+    mood_tag: "hopeful",
+    theme_tags: ["mum"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(11),
+    created_at: daysAgo(11),
+    updated_at: daysAgo(11),
+  },
+  // ── Around the 14-days-ago reflection "The week you started the piano again"
+  {
+    id: "demo-entry-008",
+    user_id: DEMO_USER_ID,
+    content:
+      "Played piano for 40 minutes. Didn't mean to. Sat down to find sheet music for something else and the hands just started.\n\nI'd forgotten how it feels when my hands know something my head doesn't.",
+    note_type: "text",
+    mood_tag: "alive",
+    theme_tags: ["piano", "music"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(13),
+    created_at: daysAgo(13),
+    updated_at: daysAgo(13),
+  },
+  {
+    id: "demo-entry-009",
+    user_id: DEMO_USER_ID,
+    content:
+      "Might pick up the piano again. It's been sitting under its cover for what — a year? Longer?\n\nI should.",
+    note_type: "text",
+    mood_tag: "uncertain",
+    theme_tags: ["piano"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(15),
+    created_at: daysAgo(15),
+    updated_at: daysAgo(15),
+  },
+  {
+    id: "demo-entry-010",
+    user_id: DEMO_USER_ID,
+    content:
+      "Ran twice this week. The second one was harder than the first. I think that's how it goes when you're rebuilding instead of maintaining.\n\nAlso: work was loud, mum was quiet, and I slept badly on Tuesday.",
+    note_type: "text",
+    mood_tag: "steady",
+    theme_tags: ["running", "work"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(16),
+    created_at: daysAgo(16),
+    updated_at: daysAgo(16),
+  },
+  // ── Around the 28-days-ago reflection "A hard week, written plainly"
+  {
+    id: "demo-entry-011",
+    user_id: DEMO_USER_ID,
+    content:
+      "I keep expecting to feel ready before I start. Maybe that's the wrong way around.\n\nThe book about the Antarctic expedition — the guy wrote that the first three days were the hardest and then his body stopped arguing. Maybe feelings are like that too.",
+    note_type: "text",
+    mood_tag: "uncertain",
+    theme_tags: ["ready", "starting"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(30),
+    created_at: daysAgo(30),
+    updated_at: daysAgo(30),
+  },
+  {
+    id: "demo-entry-012",
+    user_id: DEMO_USER_ID,
+    content:
+      "Cried in the bathroom at work. Fluorescent light, someone's perfume in the next stall, the hand dryer going. Not elegant.\n\nNo big reason. Just tired.\n\nMade myself soup when I got home.",
+    note_type: "text",
+    mood_tag: "struggling",
+    theme_tags: ["work", "tired"],
+    protected: true,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(29),
+    created_at: daysAgo(29),
+    updated_at: daysAgo(29),
+  },
+  {
+    id: "demo-entry-013",
+    user_id: DEMO_USER_ID,
+    content:
+      "The nurse rang. Mum's okay. New medication is working, she's eating again.\n\nI was at my desk when the call came and I didn't get up. I just sat there holding the phone for a minute after.\n\nRelief is its own kind of tired.",
+    note_type: "text",
+    mood_tag: "steady",
+    theme_tags: ["mum", "family"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(31),
+    created_at: daysAgo(31),
+    updated_at: daysAgo(31),
+  },
+  {
+    id: "demo-entry-014",
+    user_id: DEMO_USER_ID,
+    content:
+      "Cried on the tram for no reason I can name. Someone across from me pretended not to notice, which was the kindest thing they could have done.\n\nGot off two stops early and walked.",
+    note_type: "text",
+    mood_tag: "struggling",
+    theme_tags: ["commute", "tired"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(32),
+    created_at: daysAgo(32),
+    updated_at: daysAgo(32),
+  },
+  // ── Early, longer, more explanatory — matches the "evolution" insight
+  {
+    id: "demo-entry-015",
+    user_id: DEMO_USER_ID,
+    content:
+      "First entry here. I'm not sure what this is yet. I think I want a place to put things that aren't for anyone else.\n\nThe last year has been a lot. I don't know how to say it shorter than that without lying. Mum, work, the move, the thing with T (I'm not writing their name). I keep trying to tell the story in a way that makes sense and it doesn't, because it isn't one story, it's seven stories I'm living at the same time.\n\nSo maybe this is where I stop trying to make it make sense and just write what's happening. We'll see. I'll probably over-explain for a while before I can stop.",
+    note_type: "text",
+    mood_tag: "uncertain",
+    theme_tags: ["starting", "intention"],
+    protected: false,
+    location: null,
+    weather: null,
+    metadata: null,
+    indexed_at: daysAgo(56),
+    created_at: daysAgo(56),
+    updated_at: daysAgo(56),
   },
 ];
 
