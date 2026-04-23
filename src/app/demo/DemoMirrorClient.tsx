@@ -104,6 +104,7 @@ export default function DemoMirrorClient({
           reflections={reflections}
           insights={insights}
           inert
+          showGhosts={false}
         />
       </section>
     </div>

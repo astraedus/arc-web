@@ -292,7 +292,7 @@ export default function TemporalSpine({
 
   // Build the reflection-ghost date/copy from the derived entry count.
   let reflectionGhostDateLabel = "coming soon";
-  let reflectionGhostTitle = "Your first weekly reflection";
+  const reflectionGhostTitle = "Your first weekly reflection";
   let reflectionGhostBody =
     "Your first weekly reflection will appear here after your first few entries.";
   if (ghosts) {
