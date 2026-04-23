@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { moodColor } from "@/lib/mood-palette";
 
@@ -33,6 +34,26 @@ type GraphThemeNode = {
   label: string;
   count: number;
 };
+/**
+ * Ghost theme node — a dashed, translucent placeholder that teaches the
+ * user "a real theme will land here". Rendered only in State A (0 real
+ * themes, the big lonely one) and State B (1-4 real themes, a few small
+ * ones hovering on the outside). Dropped entirely in State C so the real
+ * graph carries its own weight.
+ */
+type GhostNode = {
+  id: string;
+  type: "ghost";
+  /** "anchor" = the big centered ghost used on State A. "satellite" = the
+   * smaller ones used on State B to hint at growth room. */
+  variant: "anchor" | "satellite";
+  label: string;
+};
+type GraphNode =
+  | GraphEntryNode
+  | GraphReflectionNode
+  | GraphThemeNode
+  | GhostNode;
 type GraphLink = {
   source: string;
   target: string;
@@ -60,6 +81,14 @@ function snippet(text: string, max = 200) {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max)}...` : flat;
 }
+
+/** Min theme count (themes appearing in >= 2 entries) at which the
+ * constellation is "full enough" — no more ghosts, real graph carries
+ * itself. Mirrors the progressive-reveal thresholds chosen for /mirror. */
+const FULL_THRESHOLD = 5;
+/** How many satellite ghost nodes to add when in State B. Gives the user
+ * a sense of "room to grow" without cluttering the canvas. */
+const SATELLITE_COUNT = 3;
 
 export default function Constellation({
   entries,
@@ -93,7 +122,7 @@ export default function Constellation({
 
   // Build graph data
   const data = useMemo(() => {
-    const nodes: Array<GraphEntryNode | GraphReflectionNode | GraphThemeNode> = [];
+    const nodes: GraphNode[] = [];
     const links: GraphLink[] = [];
     const themeCounts = new Map<string, number>();
     const themeToEntries = new Map<string, string[]>();
@@ -118,8 +147,10 @@ export default function Constellation({
     }
 
     // Theme nodes (only if used by 2+ entries — keeps graph clean)
+    let renderedThemeCount = 0;
     for (const [theme, count] of themeCounts.entries()) {
       if (count < 2) continue;
+      renderedThemeCount += 1;
       const tid = `t:${theme}`;
       nodes.push({ id: tid, type: "theme", label: theme, count });
       for (const eid of themeToEntries.get(theme) ?? []) {
@@ -161,21 +192,103 @@ export default function Constellation({
       }
     }
 
-    return { nodes, links };
+    /* ──────────────── Progressive reveal: ghost nodes ────────────────
+     *
+     * State A (0 rendered themes): show a single big ANCHOR ghost at
+     *   center, plus a full-page soft overlay with the "your first
+     *   theme will appear here" copy + CTA. The anchor gives the force
+     *   graph something non-empty to render so the canvas doesn't look
+     *   broken.
+     * State B (1 to FULL_THRESHOLD-1 rendered themes): real themes are
+     *   present; layer SATELLITE_COUNT small ghost satellites around
+     *   them with "upcoming" labels to hint at growth.
+     * State C (>= FULL_THRESHOLD rendered themes): no ghosts, no
+     *   overlay — real graph carries its own weight.
+     *
+     * Ghost nodes are tagged type "ghost" so hover handlers + click
+     * handlers ignore them cleanly (they are not routable, not
+     * hoverable — they exist only to shape the visual).
+     */
+    let state: "A" | "B" | "C";
+    if (renderedThemeCount === 0) state = "A";
+    else if (renderedThemeCount < FULL_THRESHOLD) state = "B";
+    else state = "C";
+
+    if (state === "A") {
+      nodes.push({
+        id: "g:anchor",
+        type: "ghost",
+        variant: "anchor",
+        label: "Your themes",
+      });
+    } else if (state === "B") {
+      for (let i = 0; i < SATELLITE_COUNT; i += 1) {
+        nodes.push({
+          id: `g:sat:${i}`,
+          type: "ghost",
+          variant: "satellite",
+          label: "upcoming",
+        });
+      }
+    }
+
+    return { nodes, links, state, renderedThemeCount };
   }, [entries, echoes, reflections]);
 
-  function nodeColor(node: GraphEntryNode | GraphReflectionNode | GraphThemeNode) {
+  function nodeColor(node: GraphNode) {
     if (node.type === "entry") return moodColor(node.mood);
     if (node.type === "reflection") return "#C88B2E"; // amber-dark
-    return "#9B9590"; // theme = warm-gray-light
+    if (node.type === "theme") return "#9B9590"; // theme = warm-gray-light
+    return "rgba(0, 0, 0, 0)"; // ghost — drawn manually, make stock fill invisible
   }
 
-  function nodeRadius(node: GraphEntryNode | GraphReflectionNode | GraphThemeNode) {
+  function nodeRadius(node: GraphNode) {
     if (node.type === "entry") return node.size;
     if (node.type === "reflection") return 8;
     if (node.type === "theme") return Math.max(4, Math.min(16, 4 + node.count * 1.5));
-    return 5;
+    // ghost
+    if (node.variant === "anchor") return 22;
+    return 7;
   }
+
+  /** Draws a ghost node: dashed circle outline, warm-gray, translucent,
+   * with a caption underneath. No fill — the point is it reads as a
+   * placeholder, not a real data point. */
+  function drawGhost(
+    node: GhostNode,
+    ctx: CanvasRenderingContext2D,
+    globalScale: number,
+    x: number,
+    y: number
+  ) {
+    const r = nodeRadius(node);
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = "#9B9590";
+    ctx.lineWidth = node.variant === "anchor" ? 1.6 : 1.2;
+    // Dash pattern scales slightly with globalScale so it reads at any zoom.
+    const dash = node.variant === "anchor" ? [4, 3] : [2.5, 2];
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Caption
+    const fontSize =
+      node.variant === "anchor"
+        ? Math.max(11, 13 / globalScale)
+        : Math.max(9, 10 / globalScale);
+    ctx.font = `${node.variant === "anchor" ? "500" : "400"} ${fontSize}px ui-sans-serif, system-ui`;
+    ctx.fillStyle = "#6B6560";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.globalAlpha = node.variant === "anchor" ? 0.7 : 0.55;
+    ctx.fillText(node.label, x, y + r + 3);
+    ctx.restore();
+  }
+
+  const showOverlay = data.state === "A";
 
   return (
     <div className="relative h-[calc(100vh-220px)] min-h-[500px] w-full overflow-hidden rounded-2xl border border-card-border bg-card">
@@ -190,6 +303,18 @@ export default function Constellation({
           nodeVal={(n) => Math.pow(nodeRadius(n), 2)}
           // @ts-expect-error - lib types are loose
           nodeColor={(n) => nodeColor(n)}
+          nodePointerAreaPaint={(rawNode, paintColor, ctx) => {
+            const n = rawNode as unknown as GraphNode;
+            // Ghost nodes should not be clickable / hoverable — skipping the
+            // paint removes them from the interaction mask entirely.
+            if (n.type === "ghost") return;
+            const positioned = rawNode as { x?: number; y?: number };
+            const r = nodeRadius(n);
+            ctx.fillStyle = paintColor;
+            ctx.beginPath();
+            ctx.arc(positioned.x ?? 0, positioned.y ?? 0, r, 0, Math.PI * 2);
+            ctx.fill();
+          }}
           enableNodeDrag={false}
           enablePointerInteraction={true}
           warmupTicks={50}
@@ -209,10 +334,16 @@ export default function Constellation({
               setHover(null);
               return;
             }
-            const n = node as
-              | GraphEntryNode
-              | GraphReflectionNode
-              | GraphThemeNode;
+            const n = node as GraphNode;
+            // Ghosts aren't interactive.
+            if (n.type === "ghost") {
+              setHoveredId(null);
+              setHover(null);
+              if (typeof document !== "undefined") {
+                document.body.style.cursor = "default";
+              }
+              return;
+            }
             setHoveredId(n.id);
             if (n.type === "entry") {
               setHover({
@@ -241,6 +372,10 @@ export default function Constellation({
               router.push(`/app/notes/${raw.slice(2)}`);
             } else if (raw.startsWith("r:")) {
               router.push(`/app/mirror/${raw.slice(2)}`);
+            } else if (raw.startsWith("g:")) {
+              // Ghost node clicked — take it as a hint they want to start
+              // writing. Mirrors the empty-state CTA.
+              router.push("/app/new");
             } else if (typeof console !== "undefined") {
               console.log("[Constellation] click on non-routable node:", raw);
             }
@@ -250,17 +385,25 @@ export default function Constellation({
             setHover(null);
           }}
           nodeCanvasObjectMode={(node) => {
-            const n = node as { id?: string; type?: string };
+            const n = node as GraphNode;
+            // Ghosts: fully custom render (replace the default filled circle).
+            if (n.type === "ghost") return "replace";
             // Always label themes (they're the navigational anchors)
             if (n.type === "theme") return "after";
             // Otherwise only label the currently-hovered node
             return n.id === hoveredId ? "after" : undefined;
           }}
           nodeCanvasObject={(node, ctx, globalScale) => {
-            const n = node as
-              | GraphEntryNode
-              | GraphReflectionNode
-              | GraphThemeNode;
+            const n = node as GraphNode;
+            const positioned = node as { x?: number; y?: number };
+            const x = positioned.x ?? 0;
+            const y = positioned.y ?? 0;
+
+            if (n.type === "ghost") {
+              drawGhost(n, ctx, globalScale, x, y);
+              return;
+            }
+
             const isHovered = n.id === hoveredId;
             const fontSize =
               n.type === "theme"
@@ -271,7 +414,6 @@ export default function Constellation({
             ctx.textAlign = "center";
             ctx.textBaseline = "top";
             const r = nodeRadius(n);
-            const positioned = node as { x?: number; y?: number };
             const label =
               n.type === "theme"
                 ? n.label
@@ -282,22 +424,50 @@ export default function Constellation({
             if (isHovered) {
               const w = ctx.measureText(label).width;
               ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-              ctx.fillRect(
-                (positioned.x ?? 0) - w / 2 - 4,
-                (positioned.y ?? 0) + r + 1,
-                w + 8,
-                fontSize + 4
-              );
+              ctx.fillRect(x - w / 2 - 4, y + r + 1, w + 8, fontSize + 4);
               ctx.fillStyle = "#2B2822";
             }
-            ctx.fillText(
-              label,
-              positioned.x ?? 0,
-              (positioned.y ?? 0) + r + 3
-            );
+            ctx.fillText(label, x, y + r + 3);
           }}
         />
       </div>
+
+      {/* Empty-state overlay — State A only. Soft, not a takeover. Sits
+          underneath the canvas visually (pointer-events only on the CTA
+          so the ghost node underneath stays clickable if the user wants
+          that route too). */}
+      {showOverlay && (
+        <div
+          role="status"
+          aria-label="Your constellation is empty — your first theme will appear here as you write"
+          className="pointer-events-none absolute inset-x-0 bottom-0 top-1/2 flex flex-col items-center justify-start px-6 pt-24 text-center"
+        >
+          <p className="max-w-sm text-sm italic leading-relaxed text-warm-gray">
+            Your first theme will appear here as you write.
+          </p>
+          <p className="mt-2 max-w-sm text-xs leading-relaxed text-warm-gray-light">
+            Each entry adds a thread. Echoes connect across time.
+          </p>
+          <Link
+            href="/app/new"
+            className="pointer-events-auto mt-6 inline-flex items-center rounded-full bg-amber px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
+          >
+            Write your first entry →
+          </Link>
+        </div>
+      )}
+
+      {/* State B nudge — small, bottom-left, non-intrusive. Appears once
+          there are real themes but not enough for the graph to feel full. */}
+      {data.state === "B" && (
+        <div
+          role="status"
+          aria-label="Your constellation is starting"
+          className="pointer-events-none absolute left-4 bottom-4 max-w-xs rounded-xl border border-dashed border-card-border bg-card/85 p-3 text-xs italic leading-relaxed text-warm-gray backdrop-blur-sm"
+        >
+          Your constellation is starting. Each new entry threads in.
+        </div>
+      )}
 
       {/* Hover tooltip */}
       {hover && (
@@ -323,6 +493,25 @@ export default function Constellation({
             </p>
           )}
         </div>
+      )}
+
+      {/* Accessibility-only ghost summary — screen readers get the
+          upcoming-theme count without the canvas needing any extra DOM
+          per ghost. Rendered only when ghosts are actually in the graph. */}
+      {(data.state === "A" || data.state === "B") && (
+        <ul className="sr-only" aria-label="upcoming themes">
+          {data.state === "A" && (
+            <li aria-label="upcoming theme — your first theme will appear here as you write">
+              upcoming theme anchor
+            </li>
+          )}
+          {data.state === "B" &&
+            Array.from({ length: SATELLITE_COUNT }).map((_, i) => (
+              <li key={i} aria-label="upcoming theme">
+                upcoming theme satellite {i + 1}
+              </li>
+            ))}
+        </ul>
       )}
 
       {/* Legend */}
