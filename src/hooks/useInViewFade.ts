@@ -27,9 +27,11 @@ export function useInViewFade<T extends HTMLElement = HTMLDivElement>(
 
     // Progressive enhancement: if IntersectionObserver is missing (very old
     // browsers, some test environments), just reveal immediately so nothing
-    // stays invisible.
+    // stays invisible. Defer the setState a microtask out so we're not
+    // synchronously setting state in the effect body (lint: react-hooks/
+    // set-state-in-effect).
     if (typeof IntersectionObserver === "undefined") {
-      setInView(true);
+      queueMicrotask(() => setInView(true));
       return;
     }
 
