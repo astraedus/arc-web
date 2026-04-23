@@ -191,14 +191,22 @@ export default function TemporalSpine({
   // Drill-down state: which card (by id) is currently expanded. Only one
   // at a time, for spine readability. Clicking the same card again
   // collapses it; clicking a different card moves the expansion.
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  // Collapse any open expansion when the user flips layers — it's
-  // confusing if a reflection stays expanded after you switch to
-  // "insights" because the expansion source-entry context is invalid.
-  useEffect(() => {
-    setExpandedId(null);
-  }, [layer]);
+  //
+  // We also collapse any open expansion when the user flips layers —
+  // otherwise a reflection might stay expanded after the user switches
+  // to "insights", leaking stale source-entry context. Rather than
+  // setState-in-useEffect (linter rejects cascading renders), we pair
+  // expandedId with the layer it was opened under and derive the
+  // effective expansion by matching the current layer at render.
+  const [expansion, setExpansion] = useState<{
+    id: string;
+    layer: Layer;
+  } | null>(null);
+  const expandedId =
+    expansion && expansion.layer === layer ? expansion.id : null;
+  const setExpandedId = (nextId: string | null) => {
+    setExpansion(nextId === null ? null : { id: nextId, layer });
+  };
 
   const events = useMemo(
     () => buildTimeline(reflections, insights, entries, layer),
@@ -476,9 +484,7 @@ export default function TemporalSpine({
               inert={inert}
               dim={hasHover && !isActive}
               expanded={expandedId === id}
-              onToggle={() =>
-                setExpandedId((prev) => (prev === id ? null : id))
-              }
+              onToggle={() => setExpandedId(expandedId === id ? null : id)}
               sourceEntries={sourceEntries}
               expansionCaption={expansionCaption}
               onReflectionEnter={setActiveReflectionId}
