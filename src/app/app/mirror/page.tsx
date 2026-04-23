@@ -1,22 +1,21 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import MirrorClient from "@/components/MirrorClient";
-import type { Reflection, Insight } from "@/lib/types";
+import type { Reflection, Insight, JournalEntry } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function MirrorPage() {
   const supabase = await createClient();
 
-  // Fetch reflections, insights, and entry-count in parallel. Unlike the
-  // previous `EARLY_ATLAS_THRESHOLD`-based fallback, we no longer GATE the
-  // Mirror on entry count — the spine renders at every count. Entry-count
-  // is still fetched because TemporalSpine uses it to decide which ghost
-  // placeholder cards to render (e.g. "next weekly reflection in ~N
-  // entries"). The feature never hides; it just fills in over time.
+  // Fetch reflections, insights, entries, and entry-count in parallel.
+  // Entries are fetched so the "entries" layer + spine drill-downs have
+  // real data client-side without a second round-trip. Capped at 100 to
+  // keep payload bounded; the spine already caps reflections at 50.
   const [
     { data: reflections },
     { data: insightRows },
+    { data: entryRows },
     { count: entryCount },
   ] = await Promise.all([
     supabase
@@ -31,11 +30,19 @@ export default async function MirrorPage() {
       )
       .order("created_at", { ascending: false })
       .limit(50),
+    supabase
+      .from("journal_entries")
+      .select(
+        "id, user_id, content, note_type, mood_tag, theme_tags, protected, location, weather, metadata, indexed_at, created_at, updated_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(100),
     supabase.from("journal_entries").select("id", { count: "exact", head: true }),
   ]);
 
   const reflectionList = (reflections ?? []) as Reflection[];
   const insightList = (insightRows ?? []) as Insight[];
+  const entryList = (entryRows ?? []) as JournalEntry[];
   const totalEntries = entryCount ?? 0;
 
   return (
@@ -70,6 +77,7 @@ export default async function MirrorPage() {
         <MirrorClient
           initialReflections={reflectionList}
           initialInsights={insightList}
+          initialEntries={entryList}
           entryCount={totalEntries}
         />
       </section>

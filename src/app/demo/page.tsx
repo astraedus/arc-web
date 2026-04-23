@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DemoMirrorClient from "./DemoMirrorClient";
-import { DEMO_REFLECTIONS, DEMO_INSIGHTS } from "./sample-data";
+import { DEMO_REFLECTIONS, DEMO_INSIGHTS, DEMO_ENTRIES } from "./sample-data";
 
 export const metadata: Metadata = {
   title: "Demo — The Mirror | Arc Journal",
@@ -78,6 +78,7 @@ export default function DemoMirrorPage() {
           <DemoMirrorClient
             initialReflections={DEMO_REFLECTIONS}
             initialInsights={DEMO_INSIGHTS}
+            initialEntries={DEMO_ENTRIES}
           />
         </section>
 
