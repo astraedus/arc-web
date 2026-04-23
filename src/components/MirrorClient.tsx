@@ -1,22 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
-import ClientDate from "@/components/ClientDate";
-import type { Reflection } from "@/lib/types";
+import TemporalSpine from "@/components/TemporalSpine";
+import type { Reflection, Insight } from "@/lib/types";
 
 interface MirrorClientProps {
   initialReflections: Reflection[];
-}
-
-function previewBody(text: string, lines = 6) {
-  // Preserve blank lines (paragraph breaks); just cap lines shown.
-  const split = text.split("\n");
-  if (split.length <= lines) return text;
-  return `${split.slice(0, lines).join("\n").trim()}\n\n...`;
+  initialInsights?: Insight[];
 }
 
 function friendlyMirrorError(raw: string): string {
@@ -42,6 +35,7 @@ function friendlyMirrorError(raw: string): string {
 
 export default function MirrorClient({
   initialReflections,
+  initialInsights = [],
 }: MirrorClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -225,13 +219,28 @@ export default function MirrorClient({
         )}
       </section>
 
-      {/* Reflections list */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray">
-          Past reflections
-        </h2>
+      {/* Unified Temporal Spine — reflections + insights braided together */}
+      <section className="space-y-6">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+            Your spine
+          </h2>
+          <span className="text-xs italic text-warm-gray-light">
+            {reflections.length}{" "}
+            {reflections.length === 1 ? "reflection" : "reflections"}
+            {initialInsights.length > 0 && (
+              <>
+                {" · "}
+                {initialInsights.length}{" "}
+                {initialInsights.length === 1
+                  ? "observation"
+                  : "observations"}
+              </>
+            )}
+          </span>
+        </div>
 
-        {reflections.length === 0 ? (
+        {reflections.length === 0 && initialInsights.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-card-border bg-card p-8 text-center">
             <p className="text-sm text-warm-gray">
               No reflections yet. Ask the Mirror a question or generate a weekly
@@ -239,35 +248,10 @@ export default function MirrorClient({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {reflections.map((r) => (
-              <Link
-                key={r.id}
-                href={`/app/mirror/${r.id}`}
-                className="block rounded-2xl border border-card-border bg-card p-6 transition-all hover:border-amber/30 hover:shadow-sm"
-              >
-                <div className="flex items-center justify-between text-xs text-warm-gray-light">
-                  <span className="uppercase tracking-wide">
-                    {r.reflection_type}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {r.entry_count_at_generation != null && (
-                      <span>
-                        {r.entry_count_at_generation} entries
-                      </span>
-                    )}
-                    <ClientDate iso={r.created_at} format="date" />
-                  </div>
-                </div>
-                <h3 className="mt-2 text-base font-semibold text-foreground">
-                  {r.title}
-                </h3>
-                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-warm-gray">
-                  {previewBody(r.body)}
-                </p>
-              </Link>
-            ))}
-          </div>
+          <TemporalSpine
+            reflections={reflections}
+            insights={initialInsights}
+          />
         )}
       </section>
     </div>

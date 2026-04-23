@@ -1,38 +1,25 @@
 "use client";
 
 /**
- * Demo-mode fork of MirrorClient. Renders the same reflections list + Ask UI,
+ * Demo-mode fork of MirrorClient. Renders the unified Temporal Spine + Ask UI,
  * but any Ask / Generate action shows a signup nudge instead of calling
  * Supabase. The goal: show the UX, not expose a free call-to-LLM endpoint.
  */
 import { useState } from "react";
-import type { Reflection } from "@/lib/types";
+import TemporalSpine from "@/components/TemporalSpine";
+import type { Reflection, Insight } from "@/lib/types";
 
 interface DemoMirrorClientProps {
   initialReflections: Reflection[];
-}
-
-function previewBody(text: string, lines = 6) {
-  const split = text.split("\n");
-  if (split.length <= lines) return text;
-  return `${split.slice(0, lines).join("\n").trim()}\n\n...`;
-}
-
-function shortDate(iso: string) {
-  // Compute on the client via the usual Date API. This component is "use client"
-  // so no hydration mismatch path.
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  initialInsights?: Insight[];
 }
 
 export default function DemoMirrorClient({
   initialReflections,
+  initialInsights = [],
 }: DemoMirrorClientProps) {
   const reflections = initialReflections;
+  const insights = initialInsights;
   const [question, setQuestion] = useState("");
   const [nudge, setNudge] = useState<string | null>(null);
 
@@ -101,40 +88,23 @@ export default function DemoMirrorClient({
         </span>
       </section>
 
-      {/* Reflections list */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray">
-          Past reflections
-        </h2>
-
-        <div className="space-y-4">
-          {reflections.map((r) => (
-            <article
-              key={r.id}
-              className="block rounded-2xl border border-card-border bg-card p-6 transition-all hover:border-amber/30 hover:shadow-sm"
-            >
-              <div className="flex items-center justify-between text-xs text-warm-gray-light">
-                <span className="uppercase tracking-wide">
-                  {r.reflection_type === "on_demand"
-                    ? "on demand"
-                    : r.reflection_type}
-                </span>
-                <div className="flex items-center gap-2">
-                  {r.entry_count_at_generation != null && (
-                    <span>{r.entry_count_at_generation} entries</span>
-                  )}
-                  <span>{shortDate(r.created_at)}</span>
-                </div>
-              </div>
-              <h3 className="mt-2 text-base font-semibold text-foreground">
-                {r.title}
-              </h3>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-warm-gray">
-                {previewBody(r.body)}
-              </p>
-            </article>
-          ))}
+      {/* Unified Temporal Spine — reflections + insights braided together.
+          inert=true because /app/mirror/:id is auth-gated; we don't want
+          to send demo visitors to a 401. */}
+      <section className="space-y-6">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+            Alex&apos;s spine
+          </h2>
+          <span className="text-xs italic text-warm-gray-light">
+            {reflections.length} reflections · {insights.length} observations
+          </span>
         </div>
+        <TemporalSpine
+          reflections={reflections}
+          insights={insights}
+          inert
+        />
       </section>
     </div>
   );

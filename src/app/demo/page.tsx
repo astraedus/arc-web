@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DemoMirrorClient from "./DemoMirrorClient";
-import DemoMirrorInsights from "./DemoMirrorInsights";
 import { DEMO_REFLECTIONS, DEMO_INSIGHTS } from "./sample-data";
 
 export const metadata: Metadata = {
@@ -76,11 +75,10 @@ export default function DemoMirrorPage() {
         </header>
 
         <section className="mb-24">
-          <DemoMirrorClient initialReflections={DEMO_REFLECTIONS} />
-        </section>
-
-        <section className="border-t border-card-border pt-16">
-          <DemoMirrorInsights insights={DEMO_INSIGHTS} />
+          <DemoMirrorClient
+            initialReflections={DEMO_REFLECTIONS}
+            initialInsights={DEMO_INSIGHTS}
+          />
         </section>
 
         <div className="mt-24 mb-8 text-center">

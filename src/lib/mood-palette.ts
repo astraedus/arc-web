@@ -120,3 +120,53 @@ export function getMoodSharePalette(mood?: string | null): MoodSharePalette {
   const key = mood.trim().toLowerCase();
   return SHARE_PALETTE_BY_MOOD[key] ?? NEUTRAL_SHARE_PALETTE;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Insight-type palette — used by the Temporal Spine to color the small dots
+// that represent Mirror insights between reflections. Kept muted so they
+// read as secondary to the larger mood-colored reflection dots.
+//
+// Chosen so each type is distinguishable at 6px diameter on cream paper
+// without competing with amber (the spine's primary accent) or the mood
+// palette above. Rough mental model:
+//   pattern    — desaturated teal (cycles / repeating structure)
+//   thread     — dusty rose (threads that keep returning)
+//   connection — soft violet (two distant entries that rhyme)
+//   evolution  — sage green (growth, change over time)
+//   forgotten  — warm gray (things that drifted out of view)
+// ─────────────────────────────────────────────────────────────────────────
+
+export const INSIGHT_TYPE_PALETTE: Record<string, string> = {
+  pattern: "#7AA3A6",
+  thread: "#BE8A80",
+  connection: "#9A8AA8",
+  evolution: "#8AA38A",
+  forgotten: "#A89A8A",
+};
+
+export const INSIGHT_TYPE_FALLBACK = "#A89A8A";
+
+export function insightTypeColor(type: string | null | undefined): string {
+  if (!type) return INSIGHT_TYPE_FALLBACK;
+  return INSIGHT_TYPE_PALETTE[type.toLowerCase()] ?? INSIGHT_TYPE_FALLBACK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Reflection mood mapping. Reflections don't carry a mood_tag in the schema
+// (see src/lib/types.ts — Reflection has no mood field), so for the Temporal
+// Spine we derive a stable pseudo-mood from `reflection_type`. This gives the
+// left-border / dot color on the spine without needing a schema change.
+//   weekly     — steady bronze (a pulled-back view)
+//   on_demand  — hopeful amber (a question answered in the moment)
+//   anything else falls back to steady.
+// ─────────────────────────────────────────────────────────────────────────
+
+export function reflectionSpineMood(reflectionType: string | null | undefined): string {
+  if (!reflectionType) return "steady";
+  const t = reflectionType.toLowerCase();
+  if (t === "on_demand" || t === "ondemand" || t === "on-demand") return "hopeful";
+  if (t === "weekly") return "steady";
+  if (t === "daily") return "alive";
+  if (t === "monthly") return "uncertain";
+  return "steady";
+}
