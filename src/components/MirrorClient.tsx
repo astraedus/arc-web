@@ -10,6 +10,12 @@ import type { Reflection, Insight } from "@/lib/types";
 interface MirrorClientProps {
   initialReflections: Reflection[];
   initialInsights?: Insight[];
+  /**
+   * Total journal_entries count for the signed-in user. Threaded down
+   * to TemporalSpine so it can decide which ghost placeholder cards to
+   * render in sparse-data states.
+   */
+  entryCount?: number;
 }
 
 function friendlyMirrorError(raw: string): string {
@@ -36,6 +42,7 @@ function friendlyMirrorError(raw: string): string {
 export default function MirrorClient({
   initialReflections,
   initialInsights = [],
+  entryCount,
 }: MirrorClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -219,7 +226,11 @@ export default function MirrorClient({
         )}
       </section>
 
-      {/* Unified Temporal Spine — reflections + insights braided together */}
+      {/* Unified Temporal Spine — reflections + insights braided together.
+          We ALWAYS render the spine (no bail-out on empty data). When
+          data is sparse, TemporalSpine itself renders translucent ghost
+          placeholder cards teaching the user what's coming. This is the
+          "progressive atlas" pattern — the feature never hides. */}
       <section className="space-y-6">
         <div className="flex items-baseline justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
@@ -240,18 +251,18 @@ export default function MirrorClient({
           </span>
         </div>
 
-        {reflections.length === 0 && initialInsights.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-card-border bg-card p-8 text-center">
-            <p className="text-sm text-warm-gray">
-              No reflections yet. Ask the Mirror a question or generate a weekly
-              reflection to get started.
-            </p>
-          </div>
-        ) : (
-          <TemporalSpine
-            reflections={reflections}
-            insights={initialInsights}
-          />
+        <TemporalSpine
+          reflections={reflections}
+          insights={initialInsights}
+          entryCount={entryCount}
+          showGhosts
+        />
+
+        {entryCount === 0 && reflections.length === 0 && (
+          <p className="pt-6 text-center text-sm italic text-warm-gray-light">
+            Your Mirror is quiet. Write an entry and it&apos;ll start
+            noticing who you are.
+          </p>
         )}
       </section>
     </div>
