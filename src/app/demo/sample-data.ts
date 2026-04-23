@@ -4,22 +4,21 @@
  * Persona: Alex, ~29, works in tech PM, Melbourne. Mix of honest topics across
  * ~2 months. Moods: steady, hopeful, anxious, alive, struggling, uncertain.
  *
- * The dates are anchored relative to a fixed point so the demo stays stable
- * across time: reflections show "Xd ago" consistently. We use a deterministic
- * anchor (today's date at session time is fine — the "ago" math is computed at
- * render with real Date.now, which is acceptable for a demo).
+ * Dates use a FIXED anchor (not `new Date()`) so SSR and client hydration
+ * produce identical output — otherwise React flags a text-content mismatch
+ * (error #418) every page load. Bump DEMO_ANCHOR periodically to keep dates
+ * feeling recent.
  */
 import type { Reflection, Insight } from "@/lib/types";
 
 const DEMO_USER_ID = "demo-alex-0000-0000-0000-000000000000";
 
-// Day offsets from "now" so the timeline feels fresh each visit.
+const DEMO_ANCHOR = "2026-04-23T20:14:00.000Z";
+
 function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  // zero out hours so ClientDate stable-ish
-  d.setHours(20, 14, 0, 0);
-  return d.toISOString();
+  const anchor = new Date(DEMO_ANCHOR);
+  anchor.setUTCDate(anchor.getUTCDate() - n);
+  return anchor.toISOString();
 }
 
 export const DEMO_REFLECTIONS: Reflection[] = [
