@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { NEUTRAL_MOOD_PALETTE } from "@/lib/mood-palette";
+import { NEUTRAL_SHARE_PALETTE } from "@/lib/mood-palette";
 
 export const runtime = "nodejs";
 
@@ -7,7 +7,7 @@ const SIZE = { width: 1200, height: 630 } as const;
 const SERIF = "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif";
 
 export async function GET() {
-  const palette = NEUTRAL_MOOD_PALETTE;
+  const palette = NEUTRAL_SHARE_PALETTE;
 
   return new ImageResponse(
     (

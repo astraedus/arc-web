@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import type { NextRequest } from "next/server";
 import { createPublicClient } from "@/lib/supabase/public";
-import { getMoodPalette, NEUTRAL_MOOD_PALETTE } from "@/lib/mood-palette";
+import { getMoodSharePalette, NEUTRAL_SHARE_PALETTE } from "@/lib/mood-palette";
 import { isReflectionShareable } from "@/lib/reflection-visibility";
 import { makeReflectionExcerpt } from "@/lib/reflection-excerpt";
 import type { Reflection } from "@/lib/types";
@@ -44,7 +44,7 @@ function privateCard() {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          backgroundColor: NEUTRAL_MOOD_PALETTE.wash,
+          backgroundColor: NEUTRAL_SHARE_PALETTE.wash,
           padding: "72px 80px",
           fontFamily: SERIF,
         }}
@@ -53,7 +53,7 @@ function privateCard() {
           style={{
             height: 8,
             width: 96,
-            backgroundColor: NEUTRAL_MOOD_PALETTE.accent,
+            backgroundColor: NEUTRAL_SHARE_PALETTE.accent,
             borderRadius: 4,
           }}
         />
@@ -65,14 +65,14 @@ function privateCard() {
             justifyContent: "center",
             flexDirection: "column",
             textAlign: "center",
-            color: NEUTRAL_MOOD_PALETTE.muted,
+            color: NEUTRAL_SHARE_PALETTE.muted,
           }}
         >
           <div
             style={{
               fontSize: 56,
               fontStyle: "italic",
-              color: NEUTRAL_MOOD_PALETTE.foreground,
+              color: NEUTRAL_SHARE_PALETTE.foreground,
               lineHeight: 1.15,
             }}
           >
@@ -93,7 +93,7 @@ function privateCard() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-end",
-            color: NEUTRAL_MOOD_PALETTE.muted,
+            color: NEUTRAL_SHARE_PALETTE.muted,
             fontFamily: "system-ui, sans-serif",
             fontSize: 18,
             letterSpacing: 2,
@@ -133,7 +133,7 @@ export async function GET(
       return privateCard();
     }
 
-    const palette = getMoodPalette(resolveMood(reflection));
+    const palette = getMoodSharePalette(resolveMood(reflection));
     const excerpt = makeReflectionExcerpt(reflection.body, 200);
     const dateLabel = formatDate(reflection.created_at);
     const typeLabel = (reflection.reflection_type || "reflection").replace(/_/g, " ");

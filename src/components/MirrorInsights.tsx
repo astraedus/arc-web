@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import EarlyAtlasState, { EARLY_ATLAS_THRESHOLD } from "@/components/EarlyAtlasState";
 import type { Insight } from "@/lib/types";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -37,15 +38,38 @@ function relative(iso: string) {
 
 export default async function MirrorInsights() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("insights")
-    .select(
-      "id, user_id, insight_type, title, description, related_note_ids, created_at"
-    )
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const [{ data }, { count }] = await Promise.all([
+    supabase
+      .from("insights")
+      .select(
+        "id, user_id, insight_type, title, description, related_note_ids, created_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("journal_entries")
+      .select("id", { count: "exact", head: true }),
+  ]);
 
   const insights = (data ?? []) as Insight[];
+  const entryCount = count ?? 0;
+
+  if (entryCount < EARLY_ATLAS_THRESHOLD) {
+    return (
+      <section className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+          What the Mirror has noticed
+        </h2>
+        <EarlyAtlasState
+          entryCount={entryCount}
+          title="The Mirror is listening"
+          quote="The Mirror notices patterns once you have a few entries to draw from."
+          body="A few more honest entries give the Mirror enough texture to catch recurring threads, emotional loops, and the things that keep returning."
+          ctaLabel={entryCount === 0 ? "Write your first entry" : "Add another entry"}
+        />
+      </section>
+    );
+  }
 
   if (insights.length === 0) {
     return (

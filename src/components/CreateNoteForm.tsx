@@ -6,14 +6,7 @@ import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import { organizeTranscript } from "@/lib/organize";
-
-const MOODS: Array<{ key: string; label: string; color: string }> = [
-  { key: "struggling", label: "struggling", color: "#5A748F" },
-  { key: "uncertain", label: "uncertain", color: "#7C8E6B" },
-  { key: "steady", label: "steady", color: "#A88B5C" },
-  { key: "hopeful", label: "hopeful", color: "#E8A849" },
-  { key: "alive", label: "alive", color: "#D97706" },
-];
+import { MOOD_OPTIONS } from "@/lib/mood-palette";
 
 type TranscriptionSource = "manual" | "gemini_flash";
 
@@ -231,7 +224,7 @@ export default function CreateNoteForm() {
         <span className="text-xs uppercase tracking-wider text-warm-gray-light">
           mood
         </span>
-        {MOODS.map((m) => (
+        {MOOD_OPTIONS.map((m) => (
           <button
             type="button"
             key={m.key}

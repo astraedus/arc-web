@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createPublicClient } from "@/lib/supabase/public";
 import { isReflectionShareable } from "@/lib/reflection-visibility";
 import { makeReflectionExcerpt } from "@/lib/reflection-excerpt";
-import { getMoodPalette } from "@/lib/mood-palette";
+import { getMoodSharePalette } from "@/lib/mood-palette";
 import ReflectionBody from "@/components/ReflectionBody";
 import ClientDate from "@/components/ClientDate";
 import type { Reflection } from "@/lib/types";
@@ -106,7 +106,7 @@ export default async function PublicReflectionPage({ params }: PageProps) {
     notFound();
   }
 
-  const palette = getMoodPalette(resolveMood(reflection));
+  const palette = getMoodSharePalette(resolveMood(reflection));
 
   return (
     <main className="min-h-screen w-full px-6 py-14 sm:py-20">
