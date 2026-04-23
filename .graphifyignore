@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Next.js build outputs
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+.vercel/
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# Sentry wrappers (config, not logic)
+sentry.client.config.ts
+sentry.edge.config.ts
+sentry.server.config.ts
+
+# Public assets
+public/
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.webp
+*.ico
+*.gif
+*.mp4
+*.webm
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# Config noise
+postcss.config.*
+eslint.config.*
+next.config.ts
+
+# Graphify output
+graphify-out/
+
+# Coverage / tests snapshots
+coverage/
+__snapshots__/
+
+# Docs (keep CLAUDE.md, skip docs dir)
+docs/

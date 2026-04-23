@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MOOD_PALETTE, moodColor } from "@/lib/mood-palette";
 
 type Entry = {
   id: string;
@@ -15,19 +16,6 @@ type Reflection = {
   reflection_type: string;
   created_at: string;
 };
-
-const MOOD_COLOR: Record<string, string> = {
-  alive: "#D97706",      // amber-600 (darker, vibrant)
-  hopeful: "#E8A849",    // amber accent
-  steady: "#A88B5C",     // muted bronze (visible on cream)
-  uncertain: "#7C8E6B",  // moss
-  struggling: "#5A748F", // dusty blue
-};
-
-function moodColor(m: string | null) {
-  if (!m) return "#A88B5C";
-  return MOOD_COLOR[m.toLowerCase()] ?? "#A88B5C";
-}
 
 function dayKey(iso: string) {
   return iso.slice(0, 10);
@@ -262,35 +250,35 @@ export default function RiverOfTime({
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_COLOR.alive }}
+            style={{ background: MOOD_PALETTE.alive }}
           />
           alive
         </span>
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_COLOR.hopeful }}
+            style={{ background: MOOD_PALETTE.hopeful }}
           />
           hopeful
         </span>
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_COLOR.steady }}
+            style={{ background: MOOD_PALETTE.steady }}
           />
           steady
         </span>
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_COLOR.uncertain }}
+            style={{ background: MOOD_PALETTE.uncertain }}
           />
           uncertain
         </span>
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-1.5 w-3 rounded"
-            style={{ background: MOOD_COLOR.struggling }}
+            style={{ background: MOOD_PALETTE.struggling }}
           />
           struggling
         </span>

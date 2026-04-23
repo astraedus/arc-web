@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { moodColor } from "@/lib/mood-palette";
 
 // react-force-graph-2d uses window/canvas — must be dynamic.
 const ForceGraph2D = dynamic(
@@ -54,20 +55,6 @@ export type ConstellationProps = {
     created_at: string;
   }>;
 };
-
-const MOOD_PALETTE: Record<string, string> = {
-  alive: "#D97706",
-  hopeful: "#E8A849",
-  steady: "#A88B5C",
-  uncertain: "#7C8E6B",
-  struggling: "#5A748F",
-};
-
-function moodColor(mood: string | null): string {
-  if (!mood) return "#A88B5C";
-  const k = mood.toLowerCase();
-  return MOOD_PALETTE[k] ?? "#A88B5C";
-}
 
 function snippet(text: string, max = 200) {
   const flat = text.replace(/\s+/g, " ").trim();
