@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import MirrorClient from "@/components/MirrorClient";
-import EarlyAtlasState, { EARLY_ATLAS_THRESHOLD } from "@/components/EarlyAtlasState";
 import type { Reflection, Insight } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -8,9 +8,12 @@ export const dynamic = "force-dynamic";
 export default async function MirrorPage() {
   const supabase = await createClient();
 
-  // Fetch reflections, insights, and entry-count in parallel. The entry
-  // count gates the "early atlas" onboarding state — keeps the Temporal
-  // Spine from rendering near-empty for brand-new users.
+  // Fetch reflections, insights, and entry-count in parallel. Unlike the
+  // previous `EARLY_ATLAS_THRESHOLD`-based fallback, we no longer GATE the
+  // Mirror on entry count — the spine renders at every count. Entry-count
+  // is still fetched because TemporalSpine uses it to decide which ghost
+  // placeholder cards to render (e.g. "next weekly reflection in ~N
+  // entries"). The feature never hides; it just fills in over time.
   const [
     { data: reflections },
     { data: insightRows },
@@ -50,40 +53,26 @@ export default async function MirrorPage() {
         >
           Your journal, reflected back to you.
         </p>
+
+        {totalEntries === 0 && (
+          <div className="mt-8">
+            <Link
+              href="/app/new"
+              className="inline-flex items-center rounded-full bg-amber px-5 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark"
+            >
+              Write your first entry →
+            </Link>
+          </div>
+        )}
       </header>
 
-      {/* Too-early state: users with few entries still see the Ask Mirror
-          UI + any existing reflections on the spine, but we append an
-          onboarding nudge underneath urging them to write more before the
-          Mirror starts noticing patterns. */}
-      {totalEntries < EARLY_ATLAS_THRESHOLD ? (
-        <section className="mb-24">
-          <MirrorClient
-            initialReflections={reflectionList}
-            initialInsights={[]}
-          />
-          <div className="mt-16">
-            <EarlyAtlasState
-              entryCount={totalEntries}
-              title="The Mirror is listening"
-              quote="The Mirror notices patterns once you have a few entries to draw from."
-              body="A few more honest entries give the Mirror enough texture to catch recurring threads, emotional loops, and the things that keep returning."
-              ctaLabel={
-                totalEntries === 0
-                  ? "Write your first entry"
-                  : "Add another entry"
-              }
-            />
-          </div>
-        </section>
-      ) : (
-        <section className="mb-24">
-          <MirrorClient
-            initialReflections={reflectionList}
-            initialInsights={insightList}
-          />
-        </section>
-      )}
+      <section className="mb-24">
+        <MirrorClient
+          initialReflections={reflectionList}
+          initialInsights={insightList}
+          entryCount={totalEntries}
+        />
+      </section>
 
       <div className="mt-24 mb-8 text-center">
         <span className="text-warm-gray-light/40 text-xs tracking-[0.3em]">

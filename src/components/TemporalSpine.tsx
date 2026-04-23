@@ -39,6 +39,20 @@ import {
   reflectionSpineMood,
 } from "@/lib/mood-palette";
 import type { Reflection, Insight } from "@/lib/types";
+import {
+  GhostStartingDot,
+  GhostReflectionCard,
+  GhostInsightCard,
+} from "@/components/SpineGhost";
+
+/**
+ * Entry count at which the weekly-reflection generator has enough signal
+ * to produce a real reflection. Below this, we render a ghost card on the
+ * spine telling the user how many more entries they need. The exact
+ * number is an onboarding heuristic, NOT a hard backend gate — so keeping
+ * it in the client component is fine.
+ */
+const REFLECTION_TRIGGER_ENTRIES = 5;
 
 // ───────────────────────── helpers ──────────────────────────
 
@@ -96,12 +110,27 @@ interface TemporalSpineProps {
    * for the /demo route where those routes are behind auth.
    */
   inert?: boolean;
+  /**
+   * Total journal_entries count for the current user. Drives ghost-card
+   * logic — e.g. "Next weekly reflection in ~N entries". When undefined
+   * or when `showGhosts` is false, no ghost cards render (this is the
+   * /demo-route mode, which already ships with full sample data).
+   */
+  entryCount?: number;
+  /**
+   * When true (default), render translucent ghost placeholder cards for
+   * upcoming reflections / insights when the user's data is sparse. Set
+   * to false from /demo where full sample data is already present.
+   */
+  showGhosts?: boolean;
 }
 
 export default function TemporalSpine({
   reflections,
   insights,
   inert = false,
+  entryCount,
+  showGhosts = true,
 }: TemporalSpineProps) {
   // Active reflection id drives the hover-reveal. We track it in state
   // rather than pure :hover because a related-insight dot also needs to
@@ -174,7 +203,83 @@ export default function TemporalSpine({
 
   const hasHover = activeReflectionId !== null || activeInsightId !== null;
 
-  if (events.length === 0) {
+  // ─── Ghost-card derivation ─────────────────────────────────────────
+  // We decide which ghost cards to prepend to the spine based on
+  // how much real data exists. Three progressive-disclosure states:
+  //
+  //   State A (entryCount === 0):
+  //     – a "today, starting" anchor dot
+  //     – a ghost weekly-reflection card
+  //     – a ghost insight card (only if insights.length === 0, which
+  //       is always true in this state)
+  //
+  //   State B (1 <= entryCount < REFLECTION_TRIGGER_ENTRIES AND
+  //            reflections.length === 0):
+  //     – a ghost weekly-reflection card with a dynamic "~N entries
+  //       away" label
+  //     – a ghost insight card IF insights.length === 0
+  //
+  //   State C (entryCount >= REFLECTION_TRIGGER_ENTRIES OR we have a
+  //            real reflection OR showGhosts is off):
+  //     – no ghost cards (the real spine carries its own weight)
+  //
+  // Ghosts sit at the TOP of the chronological spine because they
+  // represent what's coming next; the spine sorts newest-first.
+  const ghosts = useMemo(() => {
+    if (!showGhosts) return null;
+    if (entryCount === undefined) return null;
+
+    const reflectionCount = reflections.length;
+    const insightCount = insights.length;
+
+    // State C — plenty of data, no teaching needed.
+    if (
+      entryCount >= REFLECTION_TRIGGER_ENTRIES &&
+      reflectionCount > 0 &&
+      insightCount > 0
+    ) {
+      return null;
+    }
+
+    const entriesUntilReflection = Math.max(
+      0,
+      REFLECTION_TRIGGER_ENTRIES - entryCount
+    );
+
+    // State A — truly empty. Render the starting anchor + both ghosts.
+    if (entryCount === 0) {
+      return {
+        showStartingDot: true,
+        showReflectionGhost: true,
+        showInsightGhost: true,
+        entriesUntilReflection,
+      };
+    }
+
+    // State B — some entries but not enough for a real reflection yet,
+    // OR we haven't received any insights yet.
+    return {
+      showStartingDot: false,
+      showReflectionGhost: reflectionCount === 0,
+      showInsightGhost: insightCount === 0,
+      entriesUntilReflection,
+    };
+  }, [
+    showGhosts,
+    entryCount,
+    reflections.length,
+    insights.length,
+  ]);
+
+  // Alternating side for ghost reflection card. We start ghost side as
+  // "right" — same convention as real items (newest = right).
+  const ghostReflectionSide: "left" | "right" = "right";
+
+  // If the real event list is empty AND we have no ghost block to
+  // render, fall back to the original "nothing on the spine yet" copy
+  // (shouldn't happen now — MirrorClient handles the truly-empty case
+  // with its own copy — but we keep this as a defensive safety net).
+  if (events.length === 0 && !ghosts) {
     return (
       <div className="rounded-2xl border border-dashed border-card-border bg-card p-8 text-center">
         <p className="text-sm text-warm-gray">
@@ -183,6 +288,27 @@ export default function TemporalSpine({
         </p>
       </div>
     );
+  }
+
+  // Build the reflection-ghost date/copy from the derived entry count.
+  let reflectionGhostDateLabel = "coming soon";
+  let reflectionGhostTitle = "Your first weekly reflection";
+  let reflectionGhostBody =
+    "Your first weekly reflection will appear here after your first few entries.";
+  if (ghosts) {
+    if (ghosts.entriesUntilReflection > 0) {
+      reflectionGhostDateLabel = `~${ghosts.entriesUntilReflection} ${
+        ghosts.entriesUntilReflection === 1 ? "entry" : "entries"
+      } away`;
+      reflectionGhostBody = `Your first weekly reflection will appear here after ~${ghosts.entriesUntilReflection} more ${
+        ghosts.entriesUntilReflection === 1 ? "entry" : "entries"
+      }. Keep writing — I&rsquo;m watching.`;
+    } else {
+      // Threshold hit but no reflection yet (hasn't run yet / edge case)
+      reflectionGhostDateLabel = "any day now";
+      reflectionGhostBody =
+        "You&rsquo;ve written enough. Your first weekly reflection will appear here the next time the Mirror runs.";
+    }
   }
 
   return (
@@ -204,6 +330,29 @@ export default function TemporalSpine({
       />
 
       <ol className="relative space-y-4 md:space-y-6">
+        {/* Ghosts render first — they represent upcoming (future)
+            events, and the spine is newest-first, so "future" = top. */}
+        {ghosts?.showReflectionGhost && (
+          <GhostReflectionCard
+            key="ghost-reflection"
+            side={ghostReflectionSide}
+            dateLabel={reflectionGhostDateLabel}
+            title={reflectionGhostTitle}
+            body={stripEntities(reflectionGhostBody)}
+            ariaLabel="Upcoming: your first weekly reflection"
+          />
+        )}
+        {ghosts?.showInsightGhost && (
+          <GhostInsightCard
+            key="ghost-insight"
+            dateLabel="as patterns emerge"
+            title="Insights appear here"
+            body="Insights appear as I notice connections across your entries."
+            ariaLabel="Upcoming: your first Mirror insight"
+          />
+        )}
+        {ghosts?.showStartingDot && <GhostStartingDot key="ghost-start" />}
+
         {events.map((ev, idx) => (
           <SpineItem
             key={ev.kind === "reflection" ? ev.r.id : ev.i.id}
@@ -225,6 +374,13 @@ export default function TemporalSpine({
       </ol>
     </section>
   );
+}
+
+// Body copy above uses HTML entities so JSX lints don't trip on raw
+// apostrophes. We decode here before passing to the ghost component,
+// since the ghost renders plain text (no dangerouslySetInnerHTML).
+function stripEntities(s: string): string {
+  return s.replace(/&rsquo;/g, "’").replace(/&apos;/g, "'");
 }
 
 // ───────────────────────── item ──────────────────────────
