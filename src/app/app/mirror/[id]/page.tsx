@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ReflectionBody from "@/components/ReflectionBody";
 import ClientDate from "@/components/ClientDate";
+import ShareReflectionButton from "@/components/ShareReflectionButton";
+import { isReflectionShareable } from "@/lib/reflection-visibility";
 import type { Reflection } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -25,15 +27,23 @@ export default async function ReflectionDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const shareable = isReflectionShareable(reflection);
+
   return (
     <article className="space-y-8">
-      <div>
+      <div className="flex items-center justify-between gap-4">
         <Link
           href="/app/mirror"
           className="text-sm text-warm-gray hover:text-foreground transition-colors"
         >
           Back to Mirror
         </Link>
+        {shareable && (
+          <ShareReflectionButton
+            reflectionId={reflection.id}
+            title={reflection.title}
+          />
+        )}
       </div>
 
       <header className="space-y-3">
