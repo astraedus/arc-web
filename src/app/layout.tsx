@@ -15,8 +15,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Arc Journal",
-  description: "Your Arc Journal vault, on any browser.",
+  title: "Arc Mirror — a diary that reads you back",
+  description:
+    "Honest journaling. The Mirror reads everything you've written and shows you the threads you can't see yourself.",
+  openGraph: {
+    title: "Arc Mirror — a diary that reads you back",
+    description:
+      "Honest journaling. The Mirror reads everything you've written and shows you the threads you can't see yourself.",
+    url: "https://arc-web-pi.vercel.app",
+    siteName: "Arc",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Arc Mirror — a diary that reads you back",
+    description:
+      "Honest journaling. The Mirror reads everything you've written and shows you the threads you can't see yourself.",
+  },
 };
 
 export default function RootLayout({
