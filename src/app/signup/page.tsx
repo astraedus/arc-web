@@ -12,7 +12,7 @@ export default async function SignUpPage({
   const params = await searchParams;
   const prefillEmail = readStringParam(params.prefill);
   const isLtd = readStringParam(params.ltd) === "true";
-  const sessionId = readStringParam(params.session_id);
+  const claimToken = readStringParam(params.claim_token);
   const signInHref = isLtd
     ? `/?ltd=true&prefill=${encodeURIComponent(prefillEmail)}&redirectTo=${encodeURIComponent(
         "/app?ltd=true"
@@ -49,7 +49,7 @@ export default async function SignUpPage({
           </div>
           <SignUpForm
             isLifetimePurchase={isLtd}
-            ltdSessionId={sessionId}
+            ltdClaimToken={claimToken}
             prefillEmail={prefillEmail}
           />
         </div>

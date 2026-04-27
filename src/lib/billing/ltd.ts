@@ -1,136 +1,191 @@
 import type Stripe from "stripe";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/server";
 
-const DEFAULT_PRODUCT = "arc-mirror-ltd";
+const HARDCODED_PRODUCT_KEY = "arc-mirror-ltd";
+
+function getAllowedPriceIds(): Set<string> {
+  const raw = process.env.STRIPE_LTD_PRICE_IDS ?? "";
+  const ids = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (ids.length === 0) {
+    throw new Error("STRIPE_LTD_PRICE_IDS not configured");
+  }
+  return new Set(ids);
+}
 
 type AuthUserLookupRow = {
   user_id: string;
   ltd_purchased_at: string | null;
 };
 
-type SyncUserOptions = {
-  claimPending?: boolean;
-  password?: string;
+type EnsuredUser = {
+  isNewUser: boolean;
+  userId: string;
+  claimToken: string | null;
 };
 
 export type LtdActivationResult = {
   email: string;
   isNewUser: boolean;
-  requiresClaim: boolean;
-  session: Stripe.Checkout.Session;
   userId: string;
+  claimToken: string | null;
 };
 
+/**
+ * Activate an LTD purchase from a verified-paid Stripe checkout session.
+ * Called from the redirect handler AND from the Stripe webhook (idempotent).
+ * Single source of truth on which user a paid session is bound to: the
+ * Stripe customer email. Caller-supplied user IDs are NOT trusted.
+ */
 export async function activateLifetimePurchase({
-  preferredUserId,
   sessionId,
 }: {
-  preferredUserId?: string | null;
   sessionId: string;
 }): Promise<LtdActivationResult> {
-  const session = await retrievePaidCheckoutSession(sessionId);
+  const session = await retrievePaidLtdSession(sessionId);
   const email = getSessionEmail(session);
   const purchasedAt = stripeTimestampToIso(session.created);
   const amountCents = session.amount_total ?? session.amount_subtotal ?? null;
-  const product = session.metadata?.product?.trim() || DEFAULT_PRODUCT;
   const admin = createAdminClient();
 
-  const ensuredUser = preferredUserId
-    ? { isNewUser: false, userId: preferredUserId }
-    : await ensureUserForEmail(admin, email, purchasedAt);
+  const ensuredUser = await ensureUserForEmail(admin, email, purchasedAt);
 
-  const { error: purchaseError } = await admin.from("purchases").upsert(
-    {
-      amount_cents: amountCents,
-      created_at: purchasedAt,
-      product,
-      stripe_session_id: session.id,
-      user_id: ensuredUser.userId,
-    },
-    {
-      onConflict: "stripe_session_id",
+  // Hardened insert: never overwrite the user_id of an existing row.
+  // If the same stripe_session_id was already recorded under a different
+  // user, that is a replay attempt and must fail loudly.
+  const { error: insertError } = await admin.from("purchases").insert({
+    amount_cents: amountCents,
+    created_at: purchasedAt,
+    product: HARDCODED_PRODUCT_KEY,
+    stripe_session_id: session.id,
+    user_id: ensuredUser.userId,
+  });
+
+  if (insertError) {
+    if (insertError.code === "23505") {
+      // Unique violation on stripe_session_id. Verify same user (idempotent
+      // re-run from webhook + redirect) and otherwise reject as replay.
+      const { data: existing } = await admin
+        .from("purchases")
+        .select("user_id")
+        .eq("stripe_session_id", session.id)
+        .maybeSingle<{ user_id: string }>();
+
+      if (!existing || existing.user_id !== ensuredUser.userId) {
+        throw new Error("LTD_SESSION_BOUND_TO_DIFFERENT_USER");
+      }
+    } else {
+      throw new Error(`LTD_PURCHASE_INSERT_FAILED: ${insertError.message}`);
     }
-  );
-
-  if (purchaseError) {
-    throw new Error(`Failed to record LTD purchase: ${purchaseError.message}`);
   }
 
-  await syncLtdUserState(admin, ensuredUser.userId, purchasedAt, {
-    claimPending: ensuredUser.isNewUser ? true : undefined,
-  });
+  await stampLtdPurchasedAt(admin, ensuredUser.userId, purchasedAt);
 
   return {
     email,
     isNewUser: ensuredUser.isNewUser,
-    requiresClaim: ensuredUser.isNewUser,
-    session,
     userId: ensuredUser.userId,
+    claimToken: ensuredUser.claimToken,
   };
 }
 
+/**
+ * Complete an LTD claim for a brand-new user. Authenticated by the
+ * single-use claim token minted at activation, NOT by the Stripe session ID.
+ * The session ID is treated as sensitive bearer material and never leaves
+ * the server.
+ */
 export async function completeLifetimeClaim({
   email,
   password,
-  sessionId,
+  claimToken,
 }: {
   email: string;
   password: string;
-  sessionId: string;
-}) {
-  const activation = await activateLifetimePurchase({ sessionId });
-  const normalizedInputEmail = normalizeEmail(email);
-
-  if (activation.email !== normalizedInputEmail) {
-    throw new Error("That email does not match the completed checkout session.");
-  }
-
+  claimToken: string;
+}): Promise<{ userId: string; email: string }> {
   const admin = createAdminClient();
-  const { data, error } = await admin.auth.admin.getUserById(activation.userId);
+  const normalizedEmail = normalizeEmail(email);
 
-  if (error || !data.user) {
-    throw new Error(error?.message ?? "Failed to load the LTD user.");
+  const { data: lookup, error: lookupError } = await admin.rpc(
+    "find_auth_user_by_email",
+    { user_email: normalizedEmail }
+  );
+  if (lookupError) throw new Error("LTD_CLAIM_FAILED");
+
+  const row = (Array.isArray(lookup) ? lookup[0] : lookup) as
+    | AuthUserLookupRow
+    | null;
+  if (!row) throw new Error("LTD_CLAIM_FAILED");
+
+  const { data: userData, error: userError } =
+    await admin.auth.admin.getUserById(row.user_id);
+  if (userError || !userData.user) throw new Error("LTD_CLAIM_FAILED");
+
+  const meta = userData.user.app_metadata ?? {};
+  const storedToken =
+    typeof meta.ltd_claim_token === "string" ? meta.ltd_claim_token : null;
+  const isClaimPending = meta.ltd_claim_pending === true;
+
+  if (!isClaimPending || !storedToken) {
+    throw new Error("LTD_CLAIM_FAILED");
   }
 
-  if (data.user.app_metadata?.ltd_claim_pending !== true) {
-    throw new Error(
-      "This purchase is already linked to an Arc account. Sign in with that email instead."
-    );
+  if (!constantTimeEqualHex(claimToken, storedToken)) {
+    throw new Error("LTD_CLAIM_FAILED");
   }
 
-  await syncLtdUserState(
-    admin,
-    activation.userId,
-    activation.session.created
-      ? stripeTimestampToIso(activation.session.created)
-      : new Date().toISOString(),
+  const nextMetadata: Record<string, unknown> = { ...meta };
+  delete nextMetadata.ltd_claim_token;
+  delete nextMetadata.ltd_claim_pending;
+  nextMetadata.ltd = true;
+
+  const { error: updateError } = await admin.auth.admin.updateUserById(
+    row.user_id,
     {
-      claimPending: false,
       password,
+      app_metadata: nextMetadata,
+      email_confirm: true,
     }
   );
+  if (updateError) throw new Error("LTD_CLAIM_FAILED");
 
-  return {
-    email: activation.email,
-    userId: activation.userId,
-  };
+  return { userId: row.user_id, email: normalizedEmail };
 }
 
-export async function retrievePaidCheckoutSession(sessionId: string) {
+// --- internals ---
+
+async function retrievePaidLtdSession(
+  sessionId: string
+): Promise<Stripe.Checkout.Session> {
   const stripe = getStripe();
   const session = await stripe.checkout.sessions.retrieve(sessionId, {
-    expand: ["customer"],
+    expand: ["customer", "line_items.data.price"],
   });
 
   if (session.payment_status !== "paid") {
-    throw new Error("Stripe checkout session is not paid.");
+    throw new Error("LTD_SESSION_NOT_PAID");
+  }
+  if (session.mode !== "payment") {
+    throw new Error("LTD_SESSION_WRONG_MODE");
+  }
+
+  const allowed = getAllowedPriceIds();
+  const lineItems = session.line_items?.data ?? [];
+  const purchasedAllowedSku = lineItems.some((item) => {
+    const priceId = item.price?.id;
+    return typeof priceId === "string" && allowed.has(priceId);
+  });
+
+  if (!purchasedAllowedSku) {
+    throw new Error("LTD_SESSION_PRICE_NOT_ALLOWED");
   }
 
   return session;
 }
 
-function getSessionEmail(session: Stripe.Checkout.Session) {
+function getSessionEmail(session: Stripe.Checkout.Session): string {
   const expandedCustomer =
     typeof session.customer === "object" &&
     session.customer &&
@@ -145,7 +200,7 @@ function getSessionEmail(session: Stripe.Checkout.Session) {
     null;
 
   if (!email) {
-    throw new Error("Stripe checkout session is missing a customer email.");
+    throw new Error("LTD_SESSION_MISSING_EMAIL");
   }
 
   return normalizeEmail(email);
@@ -155,106 +210,91 @@ async function ensureUserForEmail(
   admin: ReturnType<typeof createAdminClient>,
   email: string,
   purchasedAt: string
-) {
+): Promise<EnsuredUser> {
   const existing = await findUserByEmail(admin, email);
-
   if (existing) {
-    return {
-      isNewUser: false,
-      userId: existing.user_id,
-    };
+    return { isNewUser: false, userId: existing.user_id, claimToken: null };
   }
 
-  const { data, error } = await admin.auth.admin.createUser({
-    app_metadata: {
-      ltd: true,
-      ltd_claim_pending: true,
-      ltd_purchased_at: purchasedAt,
-    },
-    email,
-    email_confirm: true,
-  });
+  const claimToken = randomBytes(32).toString("hex"); // 256-bit, single-use
 
-  if (error || !data.user) {
-    throw new Error(error?.message ?? "Failed to create the LTD user.");
+  const { data: created, error: createError } =
+    await admin.auth.admin.createUser({
+      app_metadata: {
+        ltd: true,
+        ltd_claim_pending: true,
+        ltd_claim_token: claimToken,
+        ltd_purchased_at: purchasedAt,
+      },
+      email,
+      email_confirm: true,
+    });
+
+  if (createError) {
+    // Race window: a concurrent activation just created this user. Re-look up.
+    const message = createError.message ?? "";
+    if (
+      message.toLowerCase().includes("already") ||
+      message.toLowerCase().includes("exist")
+    ) {
+      const found = await findUserByEmail(admin, email);
+      if (found) {
+        return { isNewUser: false, userId: found.user_id, claimToken: null };
+      }
+    }
+    throw new Error(`LTD_USER_CREATE_FAILED: ${createError.message}`);
   }
+  if (!created.user) throw new Error("LTD_USER_CREATE_FAILED");
 
-  return {
-    isNewUser: true,
-    userId: data.user.id,
-  };
+  return { isNewUser: true, userId: created.user.id, claimToken };
 }
 
 async function findUserByEmail(
   admin: ReturnType<typeof createAdminClient>,
   email: string
-) {
+): Promise<AuthUserLookupRow | null> {
   const { data, error } = await admin.rpc("find_auth_user_by_email", {
     user_email: email,
   });
-
   if (error) {
-    throw new Error(`Failed to look up the LTD user: ${error.message}`);
+    throw new Error(`LTD_USER_LOOKUP_FAILED: ${error.message}`);
   }
-
-  const row = (Array.isArray(data) ? data[0] : data) as AuthUserLookupRow | null;
+  const row = (Array.isArray(data) ? data[0] : data) as
+    | AuthUserLookupRow
+    | null;
   return row ?? null;
 }
 
-async function syncLtdUserState(
+async function stampLtdPurchasedAt(
   admin: ReturnType<typeof createAdminClient>,
   userId: string,
-  purchasedAt: string,
-  options: SyncUserOptions = {}
-) {
-  const { error: stampError } = await admin.rpc("set_user_ltd_purchased_at", {
+  purchasedAt: string
+): Promise<void> {
+  const { error } = await admin.rpc("set_user_ltd_purchased_at", {
     purchased_at: purchasedAt,
     target_user_id: userId,
   });
-
-  if (stampError) {
-    throw new Error(`Failed to stamp LTD access: ${stampError.message}`);
-  }
-
-  const { data, error } = await admin.auth.admin.getUserById(userId);
-
-  if (error || !data.user) {
-    throw new Error(error?.message ?? "Failed to fetch the LTD user.");
-  }
-
-  const currentMetadata = { ...(data.user.app_metadata ?? {}) };
-  const nextMetadata: Record<string, unknown> = {
-    ...currentMetadata,
-    ltd: true,
-    ltd_purchased_at:
-      typeof currentMetadata.ltd_purchased_at === "string"
-        ? currentMetadata.ltd_purchased_at
-        : purchasedAt,
-  };
-
-  if (options.claimPending === true) {
-    nextMetadata.ltd_claim_pending = true;
-  }
-
-  if (options.claimPending === false) {
-    delete nextMetadata.ltd_claim_pending;
-  }
-
-  const { error: updateError } = await admin.auth.admin.updateUserById(userId, {
-    ...(options.password ? { password: options.password } : {}),
-    app_metadata: nextMetadata,
-    email_confirm: true,
-  });
-
-  if (updateError) {
-    throw new Error(`Failed to update LTD user metadata: ${updateError.message}`);
-  }
+  if (error) throw new Error(`LTD_STAMP_FAILED: ${error.message}`);
 }
 
-function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
+function normalizeEmail(email: string): string {
+  return email.trim().normalize("NFKC").toLowerCase();
 }
 
-function stripeTimestampToIso(timestamp: number) {
+function stripeTimestampToIso(timestamp: number): string {
   return new Date(timestamp * 1000).toISOString();
+}
+
+/**
+ * Constant-time compare of two hex strings of expected equal length.
+ * Returns false (non-throwing) on length mismatch so timing reveals nothing
+ * beyond "lengths differ" (which they always shouldn't for our 32-byte tokens).
+ */
+function constantTimeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
+  } catch {
+    return false;
+  }
 }
