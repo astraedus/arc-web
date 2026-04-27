@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { activateLifetimePurchase } from "@/lib/billing/ltd";
+import { sendLtdClaimEmail } from "@/lib/email/resend";
 import { getStripe, getStripeWebhookSecret } from "@/lib/stripe/server";
 
 export const runtime = "nodejs";
@@ -34,8 +35,9 @@ export async function POST(request: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
+    let activation;
     try {
-      await activateLifetimePurchase({ sessionId: session.id });
+      activation = await activateLifetimePurchase({ sessionId: session.id });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       console.error("[stripe-webhook] activation failed", {
@@ -56,6 +58,39 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true, dropped: true });
       }
       return NextResponse.json({ error: "internal" }, { status: 500 });
+    }
+
+    // Race-fix: only ONE of webhook/redirect wins createUser and sees
+    // (isNewUser:true, claimToken:non-null). That winner sends the email.
+    // The loser sees (isNewUser:false, claimToken:null) and does nothing.
+    // Without this, if the webhook wins, the buyer gets no email at all.
+    if (activation.isNewUser && activation.claimToken) {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ??
+        new URL(request.url).origin;
+      const claimUrl = new URL("/signup", baseUrl);
+      claimUrl.searchParams.set("ltd", "true");
+      claimUrl.searchParams.set("claim_token", activation.claimToken);
+      claimUrl.searchParams.set("prefill", activation.email);
+
+      try {
+        await sendLtdClaimEmail({
+          to: activation.email,
+          claimUrl: claimUrl.toString(),
+        });
+      } catch (error) {
+        // Email delivery failed but the purchase + claim token are recorded.
+        // Log loudly; an operator can manually resend via Resend dashboard
+        // until the resend route ships.
+        console.error("[stripe-webhook] claim email send failed", {
+          eventId: event.id,
+          userId: activation.userId,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+        // Still ack 200: the purchase landed, this is a deliverability issue
+        // not a Stripe-event-processing issue. Retrying the webhook won't fix
+        // a Resend outage.
+      }
     }
   }
 
