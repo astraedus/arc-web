@@ -1,9 +1,10 @@
 import type Stripe from "stripe";
-import { randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/server";
 
 const HARDCODED_PRODUCT_KEY = "arc-mirror-ltd";
+const CLAIM_TOKEN_TTL_MS = 60 * 60 * 1000; // 60 minutes
 
 function getAllowedPriceIds(): Set<string> {
   const raw = process.env.STRIPE_LTD_PRICE_IDS ?? "";
@@ -124,20 +125,33 @@ export async function completeLifetimeClaim({
   if (userError || !userData.user) throw new Error("LTD_CLAIM_FAILED");
 
   const meta = userData.user.app_metadata ?? {};
-  const storedToken =
-    typeof meta.ltd_claim_token === "string" ? meta.ltd_claim_token : null;
+  const storedHash =
+    typeof meta.ltd_claim_token_hash === "string"
+      ? meta.ltd_claim_token_hash
+      : null;
+  const expiresAtRaw =
+    typeof meta.ltd_claim_expires_at === "string"
+      ? meta.ltd_claim_expires_at
+      : null;
   const isClaimPending = meta.ltd_claim_pending === true;
 
-  if (!isClaimPending || !storedToken) {
+  if (!isClaimPending || !storedHash || !expiresAtRaw) {
     throw new Error("LTD_CLAIM_FAILED");
   }
 
-  if (!constantTimeEqualHex(claimToken, storedToken)) {
+  const expiresAtMs = Date.parse(expiresAtRaw);
+  if (!Number.isFinite(expiresAtMs) || Date.now() > expiresAtMs) {
+    throw new Error("LTD_CLAIM_EXPIRED");
+  }
+
+  const presentedHash = sha256Hex(claimToken);
+  if (!constantTimeEqualHex(presentedHash, storedHash)) {
     throw new Error("LTD_CLAIM_FAILED");
   }
 
   const nextMetadata: Record<string, unknown> = { ...meta };
-  delete nextMetadata.ltd_claim_token;
+  delete nextMetadata.ltd_claim_token_hash;
+  delete nextMetadata.ltd_claim_expires_at;
   delete nextMetadata.ltd_claim_pending;
   nextMetadata.ltd = true;
 
@@ -217,13 +231,16 @@ async function ensureUserForEmail(
   }
 
   const claimToken = randomBytes(32).toString("hex"); // 256-bit, single-use
+  const claimTokenHash = sha256Hex(claimToken);
+  const claimExpiresAt = new Date(Date.now() + CLAIM_TOKEN_TTL_MS).toISOString();
 
   const { data: created, error: createError } =
     await admin.auth.admin.createUser({
       app_metadata: {
         ltd: true,
         ltd_claim_pending: true,
-        ltd_claim_token: claimToken,
+        ltd_claim_token_hash: claimTokenHash,
+        ltd_claim_expires_at: claimExpiresAt,
         ltd_purchased_at: purchasedAt,
       },
       email,
@@ -297,4 +314,8 @@ function constantTimeEqualHex(a: string, b: string): boolean {
   } catch {
     return false;
   }
+}
+
+function sha256Hex(value: string): string {
+  return createHash("sha256").update(value, "utf8").digest("hex");
 }
