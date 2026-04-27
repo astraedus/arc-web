@@ -5,9 +5,19 @@ import { useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignUpForm() {
+type SignUpFormProps = {
+  isLifetimePurchase?: boolean;
+  ltdSessionId?: string;
+  prefillEmail?: string;
+};
+
+export default function SignUpForm({
+  isLifetimePurchase = false,
+  ltdSessionId = "",
+  prefillEmail = "",
+}: SignUpFormProps) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefillEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -18,6 +28,52 @@ export default function SignUpForm() {
     setError(null);
     setInfo(null);
     const supabase = createClient();
+
+    if (isLifetimePurchase) {
+      if (!ltdSessionId) {
+        setError("Missing checkout session. Return to your purchase confirmation link.");
+        return;
+      }
+
+      const claimResponse = await fetch("/auth/ltd-claim", {
+        body: JSON.stringify({
+          email,
+          password,
+          sessionId: ltdSessionId,
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      });
+
+      const claimResult = (await claimResponse.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!claimResponse.ok) {
+        setError(claimResult.error ?? "Failed to unlock your lifetime access.");
+        return;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
+      posthog.capture("ltd_account_claimed");
+      startTransition(() => {
+        router.replace("/app?ltd=true");
+        router.refresh();
+      });
+      return;
+    }
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -92,16 +148,36 @@ export default function SignUpForm() {
           {info}
         </p>
       ) : null}
+      {isLifetimePurchase ? (
+        <p className="text-sm text-warm-gray">
+          We&apos;ll attach this password to the email you used at checkout.
+        </p>
+      ) : null}
       <button
         type="submit"
         disabled={isPending}
         className="w-full rounded-lg bg-amber px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-amber-dark disabled:opacity-60"
       >
-        {isPending ? "Creating account..." : "Create account"}
+        {isPending
+          ? isLifetimePurchase
+            ? "Unlocking access..."
+            : "Creating account..."
+          : isLifetimePurchase
+            ? "Set password and continue"
+            : "Create account"}
       </button>
       <p className="text-center text-sm text-warm-gray">
         Already have an account?{" "}
-        <a href="/" className="font-medium text-amber-dark hover:underline">
+        <a
+          href={
+            isLifetimePurchase
+              ? `/?ltd=true&prefill=${encodeURIComponent(email)}&redirectTo=${encodeURIComponent(
+                  "/app?ltd=true"
+                )}`
+              : "/"
+          }
+          className="font-medium text-amber-dark hover:underline"
+        >
           Sign in
         </a>
       </p>

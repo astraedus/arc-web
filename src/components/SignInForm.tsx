@@ -1,16 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("prefill") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    const prefill = searchParams.get("prefill");
+    if (prefill) {
+      setEmail(prefill);
+    }
+  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,6 +50,11 @@ export default function SignInForm() {
       onSubmit={handleSubmit}
       className="w-full max-w-sm space-y-4 rounded-2xl border border-card-border bg-card p-8 shadow-sm"
     >
+      {searchParams.get("ltd") === "true" ? (
+        <p className="text-sm text-warm-gray">
+          Already bought lifetime access? Sign in with the email you used at checkout.
+        </p>
+      ) : null}
       <div className="space-y-2">
         <label htmlFor="email" className="block text-sm font-medium text-foreground">
           Email
