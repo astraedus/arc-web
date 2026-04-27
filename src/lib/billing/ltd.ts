@@ -149,10 +149,14 @@ export async function completeLifetimeClaim({
     throw new Error("LTD_CLAIM_FAILED");
   }
 
+  // Supabase MERGES app_metadata on update -- `delete` on the local copy
+  // does NOT propagate. To remove a key we must explicitly set it to null,
+  // which Supabase strips. Without this, the claim_token_hash sticks around
+  // and the same token can be re-used to claim again (CRITICAL bug).
   const nextMetadata: Record<string, unknown> = { ...meta };
-  delete nextMetadata.ltd_claim_token_hash;
-  delete nextMetadata.ltd_claim_expires_at;
-  delete nextMetadata.ltd_claim_pending;
+  nextMetadata.ltd_claim_token_hash = null;
+  nextMetadata.ltd_claim_expires_at = null;
+  nextMetadata.ltd_claim_pending = null;
   nextMetadata.ltd = true;
 
   const { error: updateError } = await admin.auth.admin.updateUserById(
