@@ -5,23 +5,59 @@
  * but any Ask / Generate action shows a signup nudge instead of calling
  * Supabase. The goal: show the UX, not expose a free call-to-LLM endpoint.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import TemporalSpine from "@/components/TemporalSpine";
-import type { Reflection, Insight } from "@/lib/types";
+import LayerToggle from "@/components/LayerToggle";
+import { parseLayer, type Layer } from "@/lib/spine-layer";
+import type { Reflection, Insight, JournalEntry } from "@/lib/types";
 
 interface DemoMirrorClientProps {
   initialReflections: Reflection[];
   initialInsights?: Insight[];
+  initialEntries?: JournalEntry[];
 }
 
 export default function DemoMirrorClient({
   initialReflections,
   initialInsights = [],
+  initialEntries = [],
 }: DemoMirrorClientProps) {
   const reflections = initialReflections;
   const insights = initialInsights;
+  const entries = initialEntries;
   const [question, setQuestion] = useState("");
   const [nudge, setNudge] = useState<string | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [layer, setLayer] = useState<Layer>(() =>
+    parseLayer(searchParams.get("layer"))
+  );
+
+  function handleLayerChange(next: Layer) {
+    setLayer(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "all") {
+      params.delete("layer");
+    } else {
+      params.set("layer", next);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  const counts = useMemo(
+    () => ({
+      all: reflections.length + insights.length + entries.length,
+      entries: entries.length,
+      reflections: reflections.length,
+      insights: insights.length,
+    }),
+    [reflections.length, insights.length, entries.length]
+  );
 
   function handleAsk(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -92,17 +128,23 @@ export default function DemoMirrorClient({
           inert=true because /app/mirror/:id is auth-gated; we don't want
           to send demo visitors to a 401. */}
       <section className="space-y-6">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
-            Alex&apos;s spine
-          </h2>
-          <span className="text-xs italic text-warm-gray-light">
-            {reflections.length} reflections · {insights.length} observations
-          </span>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+              Alex&apos;s spine
+            </h2>
+            <p className="mt-1 text-xs italic text-warm-gray-light">
+              {reflections.length} reflections · {insights.length} observations
+              {entries.length > 0 && ` · ${entries.length} entries`}
+            </p>
+          </div>
+          <LayerToggle value={layer} onChange={handleLayerChange} counts={counts} />
         </div>
         <TemporalSpine
           reflections={reflections}
           insights={insights}
+          entries={entries}
+          layer={layer}
           inert
           showGhosts={false}
         />

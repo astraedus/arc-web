@@ -29,7 +29,7 @@
  *     decorative and announced to assistive tech only via text content.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import ClientDate from "@/components/ClientDate";
 import WikilinkText from "@/components/WikilinkText";
@@ -39,13 +39,18 @@ import {
   insightTypeColor,
   reflectionSpineMood,
 } from "@/lib/mood-palette";
-import type { Reflection, Insight } from "@/lib/types";
+import type { Reflection, Insight, JournalEntry } from "@/lib/types";
 import type { WikilinkTargetMap } from "@/lib/wikilinks";
 import {
   GhostStartingDot,
   GhostReflectionCard,
   GhostInsightCard,
 } from "@/components/SpineGhost";
+import SpineExpansion, {
+  deriveEntryTitle,
+  deriveEntryExcerpt,
+} from "@/components/SpineExpansion";
+import { DEFAULT_LAYER, type Layer } from "@/lib/spine-layer";
 
 /**
  * Entry count at which the weekly-reflection generator has enough signal
@@ -78,24 +83,52 @@ const PROXIMITY_MS = 3 * 24 * 60 * 60 * 1000;
 
 type TimelineEvent =
   | { kind: "reflection"; at: number; r: Reflection }
-  | { kind: "insight"; at: number; i: Insight };
+  | { kind: "insight"; at: number; i: Insight }
+  | { kind: "entry"; at: number; e: JournalEntry };
 
 function buildTimeline(
   reflections: Reflection[],
-  insights: Insight[]
+  insights: Insight[],
+  entries: JournalEntry[],
+  layer: Layer
 ): TimelineEvent[] {
-  const events: TimelineEvent[] = [
-    ...reflections.map<TimelineEvent>((r) => ({
-      kind: "reflection",
-      at: new Date(r.created_at).getTime(),
-      r,
-    })),
-    ...insights.map<TimelineEvent>((i) => ({
-      kind: "insight",
-      at: new Date(i.created_at).getTime(),
-      i,
-    })),
-  ];
+  const events: TimelineEvent[] = [];
+
+  // "entries" layer shows raw journal entries chronologically. We do NOT
+  // braid in reflections/insights here — the whole point of this layer is
+  // to let the user see what they actually wrote, unadorned.
+  if (layer === "entries") {
+    for (const e of entries) {
+      events.push({
+        kind: "entry",
+        at: new Date(e.created_at).getTime(),
+        e,
+      });
+    }
+    events.sort((a, b) => b.at - a.at);
+    return events;
+  }
+
+  // All other layers draw from reflections + insights.
+  if (layer === "all" || layer === "reflections") {
+    for (const r of reflections) {
+      events.push({
+        kind: "reflection",
+        at: new Date(r.created_at).getTime(),
+        r,
+      });
+    }
+  }
+  if (layer === "all" || layer === "insights") {
+    for (const i of insights) {
+      events.push({
+        kind: "insight",
+        at: new Date(i.created_at).getTime(),
+        i,
+      });
+    }
+  }
+
   // Newest-first so the user lands on what's recent; older reflections/
   // insights trail downward. Matches the existing page rhythm.
   events.sort((a, b) => b.at - a.at);
@@ -107,6 +140,18 @@ function buildTimeline(
 interface TemporalSpineProps {
   reflections: Reflection[];
   insights: Insight[];
+  /**
+   * Journal entries — required for the "entries" layer + source-entry
+   * drill-down on reflection/insight cards. Default [] keeps older
+   * callers compiling while they migrate.
+   */
+  entries?: JournalEntry[];
+  /**
+   * Which slice of the spine to render. Controlled by LayerToggle up
+   * in MirrorClient / DemoMirrorClient. Default "all" preserves the
+   * previous braided behavior.
+   */
+  layer?: Layer;
   /**
    * When true, reflection cards are inert (no /app/mirror/:id link). Used
    * for the /demo route where those routes are behind auth.
@@ -131,6 +176,8 @@ interface TemporalSpineProps {
 export default function TemporalSpine({
   reflections,
   insights,
+  entries = [],
+  layer = DEFAULT_LAYER,
   inert = false,
   entryCount,
   showGhosts = true,
@@ -145,10 +192,61 @@ export default function TemporalSpine({
   );
   const [activeInsightId, setActiveInsightId] = useState<string | null>(null);
 
+  // Drill-down state: which card (by id) is currently expanded. Only one
+  // at a time, for spine readability. Clicking the same card again
+  // collapses it; clicking a different card moves the expansion.
+  //
+  // We also collapse any open expansion when the user flips layers —
+  // otherwise a reflection might stay expanded after the user switches
+  // to "insights", leaking stale source-entry context. Rather than
+  // setState-in-useEffect (linter rejects cascading renders), we pair
+  // expandedId with the layer it was opened under and derive the
+  // effective expansion by matching the current layer at render.
+  const [expansion, setExpansion] = useState<{
+    id: string;
+    layer: Layer;
+  } | null>(null);
+  const expandedId =
+    expansion && expansion.layer === layer ? expansion.id : null;
+  const setExpandedId = (nextId: string | null) => {
+    setExpansion(nextId === null ? null : { id: nextId, layer });
+  };
+
   const events = useMemo(
-    () => buildTimeline(reflections, insights),
-    [reflections, insights]
+    () => buildTimeline(reflections, insights, entries, layer),
+    [reflections, insights, entries, layer]
   );
+
+  // Quick lookup maps for source-entry derivation on expansion.
+  const entryById = useMemo(() => {
+    const m = new Map<string, JournalEntry>();
+    for (const e of entries) m.set(e.id, e);
+    return m;
+  }, [entries]);
+
+  // Source-entry derivation for each card kind:
+  //   – reflection: entries within ±3 days of r.created_at (temporal)
+  //   – insight: entries whose id is in related_note_ids; fall back to
+  //     temporal ±3d if that set is empty.
+  //   – entry: the entry itself, single-item array.
+  function sourceEntriesForReflection(r: Reflection): JournalEntry[] {
+    const rAt = new Date(r.created_at).getTime();
+    return entries.filter(
+      (e) => Math.abs(new Date(e.created_at).getTime() - rAt) <= PROXIMITY_MS
+    );
+  }
+  function sourceEntriesForInsight(i: Insight): JournalEntry[] {
+    const ids = i.related_note_ids ?? [];
+    const mapped = ids
+      .map((id) => entryById.get(id))
+      .filter((e): e is JournalEntry => Boolean(e));
+    if (mapped.length > 0) return mapped;
+    // Fallback: temporal proximity ±3 days
+    const iAt = new Date(i.created_at).getTime();
+    return entries.filter(
+      (e) => Math.abs(new Date(e.created_at).getTime() - iAt) <= PROXIMITY_MS
+    );
+  }
 
   // Precompute reflection → related insight ids (temporal proximity).
   // Doing this once avoids O(n*m) work in the render path.
@@ -357,25 +455,50 @@ export default function TemporalSpine({
         )}
         {ghosts?.showStartingDot && <GhostStartingDot key="ghost-start" />}
 
-        {events.map((ev, idx) => (
-          <SpineItem
-            key={ev.kind === "reflection" ? ev.r.id : ev.i.id}
-            event={ev}
-            index={idx}
-            inert={inert}
-            dim={
-              hasHover &&
-              !(ev.kind === "reflection"
-                ? reflectionIsActive(ev.r.id)
-                : insightIsActive(ev.i.id))
-            }
-            onReflectionEnter={setActiveReflectionId}
-            onReflectionLeave={() => setActiveReflectionId(null)}
-            onInsightEnter={setActiveInsightId}
-            onInsightLeave={() => setActiveInsightId(null)}
-            wikilinkTargets={wikilinkTargets}
-          />
-        ))}
+        {events.map((ev, idx) => {
+          const id =
+            ev.kind === "reflection"
+              ? ev.r.id
+              : ev.kind === "insight"
+              ? ev.i.id
+              : ev.e.id;
+          const isActive =
+            ev.kind === "reflection"
+              ? reflectionIsActive(ev.r.id)
+              : ev.kind === "insight"
+              ? insightIsActive(ev.i.id)
+              : false;
+          let sourceEntries: JournalEntry[] = [];
+          let expansionCaption = "";
+          if (ev.kind === "reflection") {
+            sourceEntries = sourceEntriesForReflection(ev.r);
+            expansionCaption = "Entries this reflection drew from";
+          } else if (ev.kind === "insight") {
+            sourceEntries = sourceEntriesForInsight(ev.i);
+            expansionCaption = "Entries this insight notices";
+          } else {
+            sourceEntries = [ev.e];
+            expansionCaption = "Your entry";
+          }
+          return (
+            <SpineItem
+              key={id}
+              event={ev}
+              index={idx}
+              inert={inert}
+              dim={hasHover && !isActive}
+              expanded={expandedId === id}
+              onToggle={() => setExpandedId(expandedId === id ? null : id)}
+              sourceEntries={sourceEntries}
+              expansionCaption={expansionCaption}
+              wikilinkTargets={wikilinkTargets}
+              onReflectionEnter={setActiveReflectionId}
+              onReflectionLeave={() => setActiveReflectionId(null)}
+              onInsightEnter={setActiveInsightId}
+              onInsightLeave={() => setActiveInsightId(null)}
+            />
+          );
+        })}
       </ol>
     </section>
   );
@@ -395,11 +518,15 @@ interface SpineItemProps {
   index: number;
   inert: boolean;
   dim: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  sourceEntries: JournalEntry[];
+  expansionCaption: string;
+  wikilinkTargets?: WikilinkTargetMap;
   onReflectionEnter: (id: string) => void;
   onReflectionLeave: () => void;
   onInsightEnter: (id: string) => void;
   onInsightLeave: () => void;
-  wikilinkTargets?: WikilinkTargetMap;
 }
 
 function SpineItem({
@@ -407,11 +534,15 @@ function SpineItem({
   index,
   inert,
   dim,
+  expanded,
+  onToggle,
+  sourceEntries,
+  expansionCaption,
+  wikilinkTargets,
   onReflectionEnter,
   onReflectionLeave,
   onInsightEnter,
   onInsightLeave,
-  wikilinkTargets,
 }: SpineItemProps) {
   // Stagger the reveal per item. Past ~12 items the stagger caps — no
   // point making late items wait forever.
@@ -443,23 +574,53 @@ function SpineItem({
           reflection={event.r}
           side={side}
           inert={inert}
+          expanded={expanded}
+          onToggle={onToggle}
+          sourceEntries={sourceEntries}
+          expansionCaption={expansionCaption}
+          wikilinkTargets={wikilinkTargets}
           onEnter={onReflectionEnter}
           onLeave={onReflectionLeave}
-          wikilinkTargets={wikilinkTargets}
         />
       </li>
     );
   }
 
+  if (event.kind === "insight") {
+    return (
+      <li
+        ref={ref}
+        className={`relative ${baseTransition} ${revealClass} ${dimClass}`}
+      >
+        <InsightNode
+          insight={event.i}
+          inert={inert}
+          expanded={expanded}
+          onToggle={onToggle}
+          sourceEntries={sourceEntries}
+          expansionCaption={expansionCaption}
+          wikilinkTargets={wikilinkTargets}
+          onEnter={onInsightEnter}
+          onLeave={onInsightLeave}
+        />
+      </li>
+    );
+  }
+
+  // entry
   return (
     <li
       ref={ref}
       className={`relative ${baseTransition} ${revealClass} ${dimClass}`}
     >
-      <InsightNode
-        insight={event.i}
-        onEnter={onInsightEnter}
-        onLeave={onInsightLeave}
+      <EntryNode
+        entry={event.e}
+        side={side}
+        inert={inert}
+        expanded={expanded}
+        onToggle={onToggle}
+        sourceEntries={sourceEntries}
+        expansionCaption={expansionCaption}
         wikilinkTargets={wikilinkTargets}
       />
     </li>
@@ -472,57 +633,44 @@ interface ReflectionNodeProps {
   reflection: Reflection;
   side: "left" | "right";
   inert: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  sourceEntries: JournalEntry[];
+  expansionCaption: string;
+  wikilinkTargets?: WikilinkTargetMap;
   onEnter: (id: string) => void;
   onLeave: () => void;
-  wikilinkTargets?: WikilinkTargetMap;
 }
 
 function ReflectionNode({
   reflection: r,
   side,
   inert,
+  expanded,
+  onToggle,
+  sourceEntries,
+  expansionCaption,
+  wikilinkTargets,
   onEnter,
   onLeave,
-  wikilinkTargets,
 }: ReflectionNodeProps) {
   const mood = reflectionSpineMood(r.reflection_type);
   const color = moodColor(mood);
+  const expansionRef = useRef<HTMLDivElement>(null);
 
-  // Card content — shared between the Link + inert-article variants
-  const cardInner = (
-    <>
-      <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.14em] text-warm-gray-light">
-        <span>
-          {r.reflection_type === "on_demand" ? "on demand" : r.reflection_type}
-        </span>
-        <div className="flex items-center gap-2">
-          {r.entry_count_at_generation != null && (
-            <span>{r.entry_count_at_generation} entries</span>
-          )}
-          <ClientDate iso={r.created_at} format="date" />
-        </div>
-      </div>
-      <h3
-        className="mt-2 text-[17px] italic leading-snug text-foreground"
-        style={{
-          fontFamily:
-            "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
-        }}
-      >
-        {r.title}
-      </h3>
-      <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-warm-gray">
-        <WikilinkText text={previewBody(r.body)} targets={wikilinkTargets} />
-      </p>
-    </>
-  );
-
-  // Card wrapper — either a Link (authed /app/mirror) or an article (demo).
-  const cardClass = `
-    group/card block rounded-2xl border border-card-border bg-card p-5
-    transition-all duration-300 ease-out
-    hover:border-amber/40 hover:shadow-sm
-  `;
+  // Focus-management: when a card opens, move focus to the first
+  // interactive element inside the expansion so keyboard users don't
+  // lose context. If there's nothing interactive (demo / no link), this
+  // is a no-op.
+  useEffect(() => {
+    if (!expanded) return;
+    const el = expansionRef.current;
+    if (!el) return;
+    const focusable = el.querySelector<HTMLElement>(
+      'a, button, [tabindex]:not([tabindex="-1"])'
+    );
+    focusable?.focus();
+  }, [expanded]);
 
   return (
     <div
@@ -534,10 +682,7 @@ function ReflectionNode({
     >
       {/* Dot on the spine */}
       <span
-        aria-label={`Reflection on ${new Date(r.created_at).toLocaleDateString(
-          undefined,
-          { month: "long", day: "numeric", year: "numeric" }
-        )}, ${mood} tone`}
+        aria-hidden="true"
         className="
           absolute top-5 z-10 flex h-[14px] w-[14px] items-center justify-center rounded-full
           ring-4 ring-background transition-transform duration-300
@@ -559,22 +704,72 @@ function ReflectionNode({
           }
         `}
       >
-        {inert ? (
-          <article
-            className={cardClass}
-            style={{ borderLeft: `4px solid ${color}` }}
+        <article
+          className="group/card rounded-2xl border border-card-border bg-card p-5 transition-all duration-300 ease-out hover:border-amber/40 hover:shadow-sm"
+          style={{ borderLeft: `4px solid ${color}` }}
+        >
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-label={`Reflection on ${new Date(
+              r.created_at
+            ).toLocaleDateString(undefined, {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}, ${mood} tone. ${
+              expanded ? "Collapse" : "Expand"
+            } source entries.`}
+            className="block w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
           >
-            {cardInner}
-          </article>
-        ) : (
-          <Link
-            href={`/app/mirror/${r.id}`}
-            className={cardClass}
-            style={{ borderLeft: `4px solid ${color}` }}
-          >
-            {cardInner}
-          </Link>
-        )}
+            <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.14em] text-warm-gray-light">
+              <span>
+                {r.reflection_type === "on_demand"
+                  ? "on demand"
+                  : r.reflection_type}
+              </span>
+              <div className="flex items-center gap-2">
+                {r.entry_count_at_generation != null && (
+                  <span>{r.entry_count_at_generation} entries</span>
+                )}
+                <ClientDate iso={r.created_at} format="date" />
+              </div>
+            </div>
+            <h3
+              className="mt-2 text-[17px] italic leading-snug text-foreground"
+              style={{
+                fontFamily:
+                  "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
+              }}
+            >
+              {r.title}
+            </h3>
+            <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-warm-gray">
+              <WikilinkText text={previewBody(r.body)} targets={wikilinkTargets} />
+            </p>
+          </button>
+
+          {expanded && (
+            <div ref={expansionRef}>
+              <SpineExpansion
+                entries={sourceEntries}
+                inert={inert}
+                caption={expansionCaption}
+              />
+              {!inert && (
+                <div className="mt-4 ml-4 pl-4">
+                  <Link
+                    href={`/app/mirror/${r.id}`}
+                    className="text-[11px] italic text-warm-gray underline-offset-2 hover:text-amber-dark hover:underline"
+                  >
+                    open full reflection →
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </article>
       </div>
     </div>
   );
@@ -584,19 +779,44 @@ function ReflectionNode({
 
 interface InsightNodeProps {
   insight: Insight;
+  inert: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  sourceEntries: JournalEntry[];
+  expansionCaption: string;
+  wikilinkTargets?: WikilinkTargetMap;
   onEnter: (id: string) => void;
   onLeave: () => void;
-  wikilinkTargets?: WikilinkTargetMap;
 }
 
 function InsightNode({
   insight: i,
+  inert,
+  expanded,
+  onToggle,
+  sourceEntries,
+  expansionCaption,
+  wikilinkTargets,
   onEnter,
   onLeave,
-  wikilinkTargets,
 }: InsightNodeProps) {
   const color = insightTypeColor(i.insight_type);
   const typeLabel = TYPE_LABEL[i.insight_type] ?? i.insight_type;
+  const expansionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const el = expansionRef.current;
+    if (!el) return;
+    const focusable = el.querySelector<HTMLElement>(
+      'a, button, [tabindex]:not([tabindex="-1"])'
+    );
+    focusable?.focus();
+  }, [expanded]);
+
+  // When expanded, let the card grow to full width — otherwise the 340px
+  // cap squeezes the entry list. When collapsed, keep the compact cap.
+  const widthClass = expanded ? "" : "md:max-w-[340px]";
 
   return (
     <div
@@ -608,9 +828,7 @@ function InsightNode({
     >
       {/* Small dot on the spine */}
       <span
-        aria-label={`${typeLabel} insight on ${new Date(
-          i.created_at
-        ).toLocaleDateString(undefined, { month: "long", day: "numeric" })}`}
+        aria-hidden="true"
         className="
           absolute top-3 z-10 h-[8px] w-[8px] rounded-full
           ring-[3px] ring-background transition-transform duration-300
@@ -624,34 +842,161 @@ function InsightNode({
           of the spine on all viewports. Insights are secondary to
           reflections; keeping them always on the right prevents the
           spine from turning into a chaotic two-column zigzag. */}
-      <div className="pl-12 md:pl-0 md:ml-[calc(50%+28px)] md:max-w-[340px]">
+      <div className={`pl-12 md:pl-0 md:ml-[calc(50%+28px)] ${widthClass}`}>
         <article
-          className="
-            group/ins rounded-xl border border-card-border/70 bg-card/70 px-4 py-3
-            transition-colors duration-300
-            hover:border-amber/30
-          "
+          className="group/ins rounded-xl border border-card-border/70 bg-card/70 px-4 py-3 transition-colors duration-300 hover:border-amber/30"
           style={{ borderLeft: `2px solid ${color}` }}
         >
-          <div className="flex items-baseline justify-between gap-2 text-[9px] uppercase tracking-[0.14em] text-warm-gray-light">
-            <span style={{ color }}>{typeLabel}</span>
-            <span>
-              {new Date(i.created_at).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-          <h4 className="mt-1 text-[13px] font-semibold leading-snug text-foreground">
-            {i.title}
-          </h4>
-          {i.description && (
-            <p className="mt-1.5 text-[12px] leading-relaxed text-warm-gray line-clamp-3">
-              <WikilinkText
-                text={i.description}
-                targets={wikilinkTargets}
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-label={`${typeLabel} insight on ${new Date(
+              i.created_at
+            ).toLocaleDateString(undefined, {
+              month: "long",
+              day: "numeric",
+            })}. ${expanded ? "Collapse" : "Expand"} source entries.`}
+            className="block w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
+          >
+            <div className="flex items-baseline justify-between gap-2 text-[9px] uppercase tracking-[0.14em] text-warm-gray-light">
+              <span style={{ color }}>{typeLabel}</span>
+              <ClientDate iso={i.created_at} format="short" />
+            </div>
+            <h4 className="mt-1 text-[13px] font-semibold leading-snug text-foreground">
+              {i.title}
+            </h4>
+            {i.description && (
+              <p
+                className={`mt-1.5 text-[12px] leading-relaxed text-warm-gray ${
+                  expanded ? "" : "line-clamp-3"
+                }`}
+              >
+                <WikilinkText text={i.description} targets={wikilinkTargets} />
+              </p>
+            )}
+          </button>
+
+          {expanded && (
+            <div ref={expansionRef}>
+              <SpineExpansion
+                entries={sourceEntries}
+                inert={inert}
+                caption={expansionCaption}
               />
-            </p>
+            </div>
+          )}
+        </article>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── entry node ──────────────────────────
+
+interface EntryNodeProps {
+  entry: JournalEntry;
+  side: "left" | "right";
+  inert: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  sourceEntries: JournalEntry[];
+  expansionCaption: string;
+  wikilinkTargets?: WikilinkTargetMap;
+}
+
+function EntryNode({
+  entry,
+  side,
+  inert,
+  expanded,
+  onToggle,
+  sourceEntries,
+  expansionCaption,
+  wikilinkTargets,
+}: EntryNodeProps) {
+  const color = moodColor(entry.mood_tag);
+  const title = deriveEntryTitle(entry.content);
+  const excerpt = deriveEntryExcerpt(entry.content);
+  const expansionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const el = expansionRef.current;
+    if (!el) return;
+    const focusable = el.querySelector<HTMLElement>(
+      'a, button, [tabindex]:not([tabindex="-1"])'
+    );
+    focusable?.focus();
+  }, [expanded]);
+
+  return (
+    <div className="relative">
+      {/* Dot on the spine — sized between reflection (14px) and insight
+          (8px); entries are the primitive unit, so they deserve their
+          own visual weight. */}
+      <span
+        aria-hidden="true"
+        className="
+          absolute top-5 z-10 h-[10px] w-[10px] rounded-full
+          ring-[3px] ring-background transition-transform duration-300
+          left-[15px] md:left-1/2 md:-translate-x-1/2
+        "
+        style={{ backgroundColor: color }}
+      />
+
+      <div
+        className={`
+          pl-12
+          md:pl-0
+          ${
+            side === "right"
+              ? "md:ml-[calc(50%+28px)] md:mr-0"
+              : "md:mr-[calc(50%+28px)] md:ml-0"
+          }
+        `}
+      >
+        <article
+          className="rounded-2xl border border-card-border bg-card p-5 transition-all duration-300 ease-out hover:border-amber/40 hover:shadow-sm"
+          style={{ borderLeft: `4px solid ${color}` }}
+        >
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-label={`Entry on ${entry.created_at.slice(0, 10)}${entry.mood_tag ? `, mood ${entry.mood_tag}` : ""}. ${expanded ? "Collapse" : "Expand"} full entry.`}
+            className="block w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-amber focus-visible:outline-offset-2"
+          >
+            <div className="flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.14em] text-warm-gray-light">
+              <span style={{ color }}>
+                {entry.mood_tag ?? entry.note_type}
+              </span>
+              <ClientDate iso={entry.created_at} format="date" />
+            </div>
+            <h3
+              className="mt-2 text-[16px] italic leading-snug text-foreground"
+              style={{
+                fontFamily:
+                  "'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif",
+              }}
+            >
+              {title}
+            </h3>
+            {excerpt && (
+              <p className="mt-2 whitespace-pre-wrap text-[13px] leading-relaxed text-warm-gray line-clamp-3">
+                <WikilinkText text={excerpt} targets={wikilinkTargets} />
+              </p>
+            )}
+          </button>
+
+          {expanded && (
+            <div ref={expansionRef}>
+              <SpineExpansion
+                entries={sourceEntries}
+                inert={inert}
+                caption={expansionCaption}
+              />
+            </div>
           )}
         </article>
       </div>

@@ -47,3 +47,4 @@ tasks/
 docs/exec-plans/
 graphify-out/
 .claude/
+supabase/.temp/

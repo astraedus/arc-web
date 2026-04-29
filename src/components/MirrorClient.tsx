@@ -1,18 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import TemporalSpine from "@/components/TemporalSpine";
 import WikilinkText from "@/components/WikilinkText";
-import type { Reflection, Insight } from "@/lib/types";
+import LayerToggle from "@/components/LayerToggle";
+import { DEFAULT_LAYER, parseLayer, type Layer } from "@/lib/spine-layer";
+import type { Reflection, Insight, JournalEntry } from "@/lib/types";
 import type { WikilinkTargetMap } from "@/lib/wikilinks";
 
 interface MirrorClientProps {
   initialReflections: Reflection[];
   initialInsights?: Insight[];
   wikilinkTargets?: WikilinkTargetMap;
+  /**
+   * Full journal entries (capped server-side) for the signed-in user.
+   * Threaded into TemporalSpine so the "entries" layer + drill-down
+   * expansion panels have real data to render without a client-side
+   * round-trip.
+   */
+  initialEntries?: JournalEntry[];
   /**
    * Total journal_entries count for the signed-in user. Threaded down
    * to TemporalSpine so it can decide which ghost placeholder cards to
@@ -45,6 +54,7 @@ function friendlyMirrorError(raw: string): string {
 export default function MirrorClient({
   initialReflections,
   initialInsights = [],
+  initialEntries = [],
   wikilinkTargets,
   entryCount,
 }: MirrorClientProps) {
@@ -60,6 +70,44 @@ export default function MirrorClient({
 
   const [reflections, setReflections] =
     useState<Reflection[]>(initialReflections);
+
+  // Layer state — which slice of the spine is showing. Bookmarkable via
+  // ?layer=<value>. Tolerant parser so malformed URLs fall back to "all"
+  // rather than exploding.
+  const [layer, setLayer] = useState<Layer>(() =>
+    parseLayer(searchParams.get("layer"))
+  );
+
+  // When the user flips the toggle, mirror that into the URL (replace,
+  // not push — this shouldn't pollute history). We keep any other query
+  // params (e.g. ?ask=) that happen to be present.
+  function handleLayerChange(next: Layer) {
+    setLayer(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === DEFAULT_LAYER) {
+      params.delete("layer");
+    } else {
+      params.set("layer", next);
+    }
+    const qs = params.toString();
+    router.replace(`/app/mirror${qs ? `?${qs}` : ""}`);
+  }
+
+  // Counts shown as subtle numerals on the toggle pills. useMemo because
+  // initialEntries / insights can be 100-item arrays and .length on
+  // reflections re-renders often enough.
+  const counts = useMemo(
+    () => ({
+      all:
+        reflections.length +
+        initialInsights.length +
+        initialEntries.length,
+      entries: initialEntries.length,
+      reflections: reflections.length,
+      insights: initialInsights.length,
+    }),
+    [reflections.length, initialInsights.length, initialEntries.length]
+  );
 
   // If ?ask=... is present in URL (from CommandPalette), prefill + auto-submit once.
   const autoAskedRef = useRef(false);
@@ -236,28 +284,33 @@ export default function MirrorClient({
           placeholder cards teaching the user what's coming. This is the
           "progressive atlas" pattern — the feature never hides. */}
       <section className="space-y-6">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
-            Your spine
-          </h2>
-          <span className="text-xs italic text-warm-gray-light">
-            {reflections.length}{" "}
-            {reflections.length === 1 ? "reflection" : "reflections"}
-            {initialInsights.length > 0 && (
-              <>
-                {" · "}
-                {initialInsights.length}{" "}
-                {initialInsights.length === 1
-                  ? "observation"
-                  : "observations"}
-              </>
-            )}
-          </span>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-warm-gray">
+              Your spine
+            </h2>
+            <p className="mt-1 text-xs italic text-warm-gray-light">
+              {reflections.length}{" "}
+              {reflections.length === 1 ? "reflection" : "reflections"}
+              {initialInsights.length > 0 && (
+                <>
+                  {" · "}
+                  {initialInsights.length}{" "}
+                  {initialInsights.length === 1
+                    ? "observation"
+                    : "observations"}
+                </>
+              )}
+            </p>
+          </div>
+          <LayerToggle value={layer} onChange={handleLayerChange} counts={counts} />
         </div>
 
         <TemporalSpine
           reflections={reflections}
           insights={initialInsights}
+          entries={initialEntries}
+          layer={layer}
           wikilinkTargets={wikilinkTargets}
           entryCount={entryCount}
           showGhosts
